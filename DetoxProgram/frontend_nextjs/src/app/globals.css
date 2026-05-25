@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-color: #0f172a;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --surface-color: rgba(30, 41, 59, 0.7);
+  --border-color: rgba(148, 163, 184, 0.1);
+  --glass-blur: blur(16px);
+}
+
+body {
+  background-color: #F8FAFC;
+  color: #1e293b;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 얇은 스크롤바 스타일 (C 방법 보조) */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+
+.glass-panel {
+  background: var(--surface-color);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color);
+}
+
+/* Background animated glow */
+.bg-glow-1 {
+  position: fixed;
+  top: -10%; left: -10%;
+  width: 50vw; height: 50vw;
+  background: radial-gradient(circle, #6366f1, transparent);
+  filter: blur(100px);
+  opacity: 0.3;
+  z-index: -1;
+  border-radius: 50%;
+  animation: float 10s infinite alternate;
+}
+
+.bg-glow-2 {
+  position: fixed;
+  bottom: -10%; right: -10%;
+  width: 40vw; height: 40vw;
+  background: radial-gradient(circle, #ec4899, transparent);
+  filter: blur(100px);
+  opacity: 0.3;
+  z-index: -1;
+  border-radius: 50%;
+  animation: float 10s infinite alternate-reverse;
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(50px, 50px) scale(1.1); }
+}
