@@ -15,10 +15,15 @@
 
 # Large / Sensitive files
 **/시청 기록.html
+**/*creds*.json
+**/tidal-sum-*.json
+**/*.zip
+**/test_out*.json
 
 # IDEs
 **/.vscode/
 **/.idea/
+**/.expo/
 
 # Node / Next.js
 **/node_modules/

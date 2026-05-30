@@ -1,0 +1,10 @@
+DetoxProgram supabase 비밀번호 = f*hy9Ns@/5SmZgt
+API key = sb_publishable_AyCa01GmVrxFW2QJUMkPMQ_g2ZL7Lfo
+
+Youtube API 키 = AIzaSyDWMLUKdsJB6WozQ6x3JTdmcR5HJLd77mY
+
+Cloud Natural Language API User Json 키파일 = "C:\Users\Administrator\Desktop\언블리버블 프로젝트\API\
+tidal-sum-478102-i8-bfff5241f766.json"
+
+gemini API 키 = AIzaSyCdtTKMR5542ZIYzt7qEHWDMkSi6iEAJJw
+

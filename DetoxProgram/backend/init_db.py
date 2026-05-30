@@ -1,6 +1,10 @@
 from core.database import engine, Base
 # 이 임포트가 있어야 Base가 자식 테이블(스키마)을 인식합니다.
-from models.schemas import RawEvent, NormEvent, NLPResult, ScoreRun, ReportSnapshot
+from models.schemas import (
+    RawEvent, NormEvent, NLPResult, ScoreRun, ReportSnapshot,
+    Profiles, ConsentLog, RawFile, 
+    AuditLog, AnalysisJob, MissionLog, UserStreak, UserSession
+)
 
 def init_db():
     print("데이터베이스 테이블 생성을 시작합니다...")

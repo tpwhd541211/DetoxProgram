@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import upload, dashboard, detox
+from api.v1 import upload, dashboard, detox, settings
 from core.database import engine
 from models.schemas import Base
 
@@ -14,9 +14,13 @@ app = FastAPI(
 )
 
 # CORS 설정 (프론트엔드 통신 허용)
+import os
+origins_env = os.getenv("ALLOWED_ORIGINS", "*")
+origins = [o.strip() for o in origins_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # 개발 환경에서는 모두 허용, 운영 시 수정 필요
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -26,4 +30,5 @@ app.add_middleware(
 app.include_router(upload.router, prefix="/api/upload", tags=["Upload & Processing"])
 app.include_router(dashboard.router, prefix="/api", tags=["Dashboard"])
 app.include_router(detox.router, prefix="/api/detox", tags=["Detox Mission"])
+app.include_router(settings.router, prefix="/api", tags=["Settings"])
 

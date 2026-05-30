@@ -56,18 +56,32 @@ def group_into_sessions(normalized_events):
     if len(current_session["events"]) > 0:
         sessions.append(current_session)
         
-    # 3. 세션별 텍스트 연결 (title + description + tags + query_text)
+    # 3. 세션별 텍스트 연결 (title + tags + query_text)
     for session in sessions:
         texts = []
+        session_tags = []
+        session_categories = []
+        session_category_ids = []
+        
         if session["query_text"]:
             texts.append(f"Query: {session['query_text']}")
             
         for ev in session["events"]:
             if ev["event_type"] == "watch":
                 title = ev.get("title", "")
-                desc = ev.get("description", "")
-                if title: texts.append(title)
-                if desc: texts.append(desc)
+                tags = ev.get("tags") or []
+                topic_cats = ev.get("topicCategories") or []
+                category_id = ev.get("categoryId")
+                
+                if title:
+                    texts.append(title)
+                if isinstance(tags, list) and tags:
+                    texts.extend(tags)
+                    session_tags.extend(tags)
+                if isinstance(topic_cats, list) and topic_cats:
+                    session_categories.extend(topic_cats)
+                if category_id:
+                    session_category_ids.append(str(category_id))
                 
         # 4. 20토큰 미만이면 최대 5개 결합 (단순화를 위해 글자 수 기준으로 처리)
         combined_text = " | ".join(texts)
@@ -77,5 +91,13 @@ def group_into_sessions(normalized_events):
             combined_text = combined_text[:1500] + "..."
             
         session["session_text"] = combined_text
+        session["total_events"] = len(session["events"])
+        session["is_binge"] = len(session["events"]) >= 10
+        session["youtube_tags"] = list(set(session_tags))
+        session["youtube_categories"] = list(set(session_categories))
+        session["youtube_category_ids"] = list(set(session_category_ids))
+        
+        hour = session["start_time"].hour if hasattr(session["start_time"], 'hour') else 12
+        session["session_type"] = "late_night" if 0 <= hour < 5 else "normal"
         
     return sessions

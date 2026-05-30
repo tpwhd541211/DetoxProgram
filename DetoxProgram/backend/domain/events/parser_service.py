@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 import json
 import urllib.parse
 from datetime import datetime
 from bs4 import BeautifulSoup
 import re
+import unicodedata
 
 def validate_uploaded_file(file_content: bytes, filename: str):
     """
@@ -20,37 +22,55 @@ def parse_takeout_time(t_str: str) -> datetime:
     except ValueError:
         pass
     
-    # HTML 형식 타임스탬프 전처리
-    tz = "+0000"
-    if "KST" in t_str:
-        tz = "+0900"
-        t_str = t_str.replace("KST", "").strip()
-    elif "UTC" in t_str:
-        tz = "+0000"
-        t_str = t_str.replace("UTC", "").strip()
-        
-    if "오후" in t_str:
-        t_str = t_str.replace("오후", "").strip()
-        if "PM" not in t_str:
-            t_str = t_str + " PM"
-    elif "오전" in t_str:
-        t_str = t_str.replace("오전", "").strip()
-        if "AM" not in t_str:
-            t_str = t_str + " AM"
-
-    # AM/PM 위치 정규화 (예: "PM 2:21:20" -> "2:21:20 PM")
-    t_str = re.sub(r'\b(AM|PM)\b\s*(\d{1,2}:\d{2}:\d{2})', r'\2 \1', t_str)
+    # Unicode NFC 정규화 수행 (macOS NFD 자소 분리 대응)
+    t_str = unicodedata.normalize('NFC', t_str)
     
+    # 정규식 기반 날짜 추출 (예: "2024. 01. 02.", "2024-01-02", "2024/01/02")
+    date_match = re.search(r'(\d{4})[-.\s/]+(\d{1,2})[-.\s/]+(\d{1,2})', t_str)
+    if not date_match:
+        return datetime.now()
+    
+    year = int(date_match.group(1))
+    month = int(date_match.group(2))
+    day = int(date_match.group(3))
+
+    # 정규식 기반 시간 추출 (예: "3:04:05" 또는 "3:04" 초 생략 대응)
+    time_match = re.search(r'(\d{1,2}):(\d{2})(?::(\d{2}))?', t_str)
+    if not time_match:
+        return datetime.now()
+    
+    hour = int(time_match.group(1))
+    minute = int(time_match.group(2))
+    second = int(time_match.group(3)) if time_match.group(3) else 0
+
+    # 오전/오후 및 AM/PM 대소문자 검출 (로케일 독립 및 소스 코드 인코딩 세이프 유니코드 시퀀스 매칭)
+    is_pm = any(x in t_str for x in ["\uc624\ud6c4", "PM", "pm"])
+    is_am = any(x in t_str for x in ["\uc624\uc804", "AM", "am"])
+
+    if is_pm and hour < 12:
+        hour += 12
+    elif is_am and hour == 12:
+        hour = 0
+
+    # 타임존 오프셋 직접 파싱 및 대입
+    from datetime import timezone, timedelta
+    
+    # 시간 오프셋 직접 검출 (예: +0900, +09:00, -0500 등)
+    tz_match = re.search(r'([+-])(\d{2}):?(\d{2})', t_str)
+    if tz_match:
+        sign = 1 if tz_match.group(1) == '+' else -1
+        h_offset = int(tz_match.group(2))
+        m_offset = int(tz_match.group(3))
+        tz = timezone(sign * timedelta(hours=h_offset, minutes=m_offset))
+    elif "KST" in t_str:
+        tz = timezone(timedelta(hours=9))
+    else:
+        tz = timezone.utc
+
     try:
-        import dateutil.parser
-        return dateutil.parser.parse(t_str + " " + tz)
+        return datetime(year, month, day, hour, minute, second, tzinfo=tz)
     except Exception:
-        try:
-            t_str_clean = re.sub(r'\s+', ' ', t_str)
-            return datetime.strptime(t_str_clean + " " + tz, "%Y. %m. %d. %I:%M:%S %p %z")
-        except Exception:
-            pass
-    return datetime.now()
+        return datetime.now()
 
 def extract_raw_data_json(file_content: bytes):
     """
@@ -81,6 +101,9 @@ def extract_raw_data_json(file_content: bytes):
                 clean_title = title.replace("Watched ", "", 1)
             elif "을(를) 시청했습니다." in title:
                 clean_title = title.split(" 을(를) 시청했습니다.")[0].strip()
+                
+            if clean_title.startswith("http://") or clean_title.startswith("https://") or "youtube.com" in clean_title or "watch?v=" in clean_title:
+                clean_title = ""
                 
         elif is_search:
             event_type = "search"
@@ -141,6 +164,8 @@ def extract_raw_data_html(file_content: bytes):
             event_type = "watch"
             title_node = links[0]
             title = title_node.text.strip()
+            if title.startswith("http://") or title.startswith("https://") or "youtube.com" in title or "watch?v=" in title:
+                title = ""
             video_url = title_node.get("href", "")
             if "watch?v=" in video_url:
                 parsed_url = urllib.parse.urlparse(video_url)
