@@ -215,7 +215,11 @@ def extract_raw_data(file_content: bytes, filename: str):
         events = []
         
     events.sort(key=lambda x: x["watch_time"])
+    # 쾌적한 처리 속도와 자원 사용을 위해 최신 10,000건으로 제한
+    if len(events) > 10000:
+        events = events[-10000:]
     return events
+
 
 def filter_fake_dopamine(events):
     """
