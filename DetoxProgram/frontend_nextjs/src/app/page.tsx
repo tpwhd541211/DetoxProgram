@@ -406,8 +406,8 @@ function InteractiveForceGraph({ graphData, setSelectedNode, variant = 'full' }:
                 x1={src.x} y1={src.y}
                 x2={tgt.x} y2={tgt.y}
                 stroke="#E2E8F0"
-                strokeWidth={edge.value ? Math.max(1.5, edge.value * 0.4) : 2}
-                strokeOpacity={0.7}
+                strokeWidth={edge.value ? Math.min(28, Math.max(8, edge.value * 1.8)) : 12}
+                strokeOpacity={0.22}
               />
             );
           })}
@@ -439,13 +439,19 @@ function InteractiveForceGraph({ graphData, setSelectedNode, variant = 'full' }:
                   style={{ filter: 'drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.1))' }}
                 />
                 <text
-                  y={size + (isFull ? 22 : 18)}
+                  y={size + (isFull ? 20 : 16)}
                   textAnchor="middle"
                   fill="#334155"
-                  className={`${isFull ? 'text-sm md:text-base' : 'text-xs'} font-extrabold select-none pointer-events-none`}
+                  className={`${isFull ? 'text-xs md:text-sm' : 'text-[10px]'} font-extrabold select-none pointer-events-none`}
                   style={{ paintOrder: 'stroke', stroke: '#FFFFFF', strokeWidth: 3.5 }}
                 >
-                  {node.label}
+                  {node.label.includes('\n') ? (
+                    node.label.split('\n').map((line: string, i: number) => (
+                      <tspan key={i} x={0} dy={i === 0 ? 0 : (isFull ? 15 : 12)}>{line}</tspan>
+                    ))
+                  ) : (
+                    node.label
+                  )}
                 </text>
               </g>
             );

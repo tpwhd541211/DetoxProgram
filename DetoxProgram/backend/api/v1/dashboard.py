@@ -338,10 +338,41 @@ async def get_graph_data(current_user: str = Depends(get_current_user)):
         # Add Channel Nodes
         max_ch_count = max(channel_counts.values()) if channel_counts else 1
         for ch in top_channels:
+            # Count shorts vs long-form watched for this channel
+            ch_events = [ev for ev in norm_events if ev.channel_name == ch]
+            shorts_count = 0
+            long_count = 0
+            for ev in ch_events:
+                title_lower = ev.title.lower() if ev.title else ""
+                is_evt_short = ev.is_short or title_lower.startswith("#shorts")
+                if is_evt_short:
+                    shorts_count += 1
+                else:
+                    long_count += 1
+            
+            total_ch = shorts_count + long_count
+            if total_ch > 0:
+                ratio = shorts_count / total_ch
+                if ratio >= 0.8:
+                    channel_type = "쇼츠형"
+                elif ratio <= 0.2:
+                    channel_type = "롱폼형"
+                elif 0.2 < ratio <= 0.4:
+                    channel_type = "혼합형 (롱폼 선호)"
+                elif 0.4 < ratio <= 0.6:
+                    channel_type = "혼합형"
+                else:  # 0.6 < ratio <= 0.8
+                    channel_type = "혼합형 (쇼츠 선호)"
+            else:
+                channel_type = "롱폼형"
+                
+            # Truncate channel name to 12 chars
+            ch_display = ch[:12] + "..." if len(ch) > 12 else ch
+            
             size = int(16 + (channel_counts[ch] / max_ch_count) * 12)
             nodes.append({
                 "id": node_id,
-                "label": f"📺 {ch}",
+                "label": f"📺 {ch_display}\n({channel_type})",
                 "group": "channel",
                 "size": min(30, size)
             })

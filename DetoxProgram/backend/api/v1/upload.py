@@ -39,6 +39,7 @@ def save_to_db(dataset_id: str, user_id: str, raw_events, normalized_events, ses
                 description=ev.get("description", ""),
                 watch_time=ev.get("watch_time"),
                 duration_watched=ev.get("duration_watched", 0),
+                is_short=ev.get("is_short", False),
                 parse_status=ev.get("parse_status", "success")
             )
             db.add(db_norm)

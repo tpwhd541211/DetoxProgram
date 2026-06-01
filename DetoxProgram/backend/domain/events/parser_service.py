@@ -90,12 +90,18 @@ def extract_raw_data_json(file_content: bytes):
         is_watch = title.startswith("Watched ") or "을(를) 시청했습니다." in title
         is_search = title.startswith("Searched for ") or "을(를) 검색했습니다." in title
         
+        is_short = False
         if is_watch:
             event_type = "watch"
             video_url = item.get("titleUrl", "")
             if "watch?v=" in video_url:
                 parsed_url = urllib.parse.urlparse(video_url)
                 video_id = urllib.parse.parse_qs(parsed_url.query).get("v", [None])[0]
+            elif "/shorts/" in video_url:
+                is_short = True
+                parts = video_url.split("/shorts/")
+                if len(parts) > 1:
+                    video_id = parts[1].split("?")[0].split("&")[0].strip()
             
             if title.startswith("Watched "):
                 clean_title = title.replace("Watched ", "", 1)
@@ -104,6 +110,9 @@ def extract_raw_data_json(file_content: bytes):
                 
             if clean_title.startswith("http://") or clean_title.startswith("https://") or "youtube.com" in clean_title or "watch?v=" in clean_title:
                 clean_title = ""
+                
+            if clean_title.startswith("#shorts") or clean_title.lower().startswith("#shorts"):
+                is_short = True
                 
         elif is_search:
             event_type = "search"
@@ -130,7 +139,8 @@ def extract_raw_data_json(file_content: bytes):
             "channel_id": channel_id,
             "channel_name": channel_name,
             "watch_time": watch_time,
-            "description": "", 
+            "description": "",
+            "is_short": is_short
         })
         
     return events
@@ -166,10 +176,28 @@ def extract_raw_data_html(file_content: bytes):
             title = title_node.text.strip()
             if title.startswith("http://") or title.startswith("https://") or "youtube.com" in title or "watch?v=" in title:
                 title = ""
+        is_short = False
+        is_watch = (text_content.startswith("Watched ") or "을(를) 시청했습니다." in text_content) and len(links) >= 1
+        is_search = (text_content.startswith("Searched for ") or "을(를) 검색했습니다." in text_content) and len(links) >= 1
+        
+        if is_watch:
+            event_type = "watch"
+            title_node = links[0]
+            title = title_node.text.strip()
+            if title.startswith("http://") or title.startswith("https://") or "youtube.com" in title or "watch?v=" in title:
+                title = ""
             video_url = title_node.get("href", "")
             if "watch?v=" in video_url:
                 parsed_url = urllib.parse.urlparse(video_url)
                 video_id = urllib.parse.parse_qs(parsed_url.query).get("v", [None])[0]
+            elif "/shorts/" in video_url:
+                is_short = True
+                parts = video_url.split("/shorts/")
+                if len(parts) > 1:
+                    video_id = parts[1].split("?")[0].split("&")[0].strip()
+            
+            if title.startswith("#shorts") or title.lower().startswith("#shorts"):
+                is_short = True
             
             if len(links) >= 2:
                 channel_node = links[1]
@@ -198,7 +226,8 @@ def extract_raw_data_html(file_content: bytes):
             "channel_id": channel_id,
             "channel_name": channel_name,
             "watch_time": watch_time,
-            "description": "", 
+            "description": "",
+            "is_short": is_short
         })
         
     return events
