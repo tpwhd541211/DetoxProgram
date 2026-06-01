@@ -84,7 +84,10 @@ def group_into_sessions(normalized_events):
                     session_category_ids.append(str(category_id))
                 
         # 4. 20토큰 미만이면 최대 5개 결합 (단순화를 위해 글자 수 기준으로 처리)
-        combined_text = " | ".join(texts)
+        # 구글 NLP가 개별 문장으로 인식할 수 있도록 온점(.)으로 연결하여 512토큰 초과 오류를 방지합니다.
+        combined_text = ". ".join(texts)
+        if combined_text:
+            combined_text += "."
         
         # 5. 1500자 초과 시 절단
         if len(combined_text) > 1500:
