@@ -1426,7 +1426,18 @@ export default function DashboardLayout() {
                   </div>
                 )}
                 <h2 className="text-2xl font-bold text-slate-900 mb-2">시청 기록 업로드 (3/3)</h2>
-                <p className="text-slate-500 mb-8">구글 테이크아웃에서 다운로드한 시청 데이터(.json 또는 .html)를 드롭해주세요.</p>
+                <p className="text-slate-500 mb-6">구글 테이크아웃에서 다운로드한 시청 데이터(.json 또는 .html)를 드롭해주세요.</p>
+                <div className="flex items-center justify-center gap-1.5 mb-8 text-xs text-slate-500 bg-slate-50 border border-slate-100 py-2.5 px-4 rounded-xl">
+                  <span>💡 시청 기록은 최신 <strong>10,000건</strong>까지만 추출하여 분석합니다.</span>
+                  <div className="relative group cursor-pointer inline-flex items-center">
+                    <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">?</span>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-slate-950 text-white text-[11px] rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200 z-50 text-left leading-relaxed">
+                      <div className="font-semibold mb-1 text-indigo-400">왜 10,000건으로 제한하나요?</div>
+                      과도하게 누적된 시청 기록은 분석 시간 초과(Timeout)와 외부 인공지능 API 비용 증가를 야기할 수 있습니다. 디지털 디톡스 진단에는 최근 시청 패턴(약 2~3개월 분량)이 가장 중요하므로 최신 10,000건만 선별하여 분석합니다.
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-950"></div>
+                    </div>
+                  </div>
+                </div>
                 <div 
                   onDragEnter={handleDrag} onDragOver={handleDrag} onDragLeave={handleDrag} onDrop={handleDrop}
                   className={`border-2 border-dashed rounded-xl p-12 mb-8 cursor-pointer transition-colors ${
