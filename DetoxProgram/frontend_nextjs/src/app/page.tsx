@@ -1847,6 +1847,25 @@ export default function DashboardLayout() {
                         </ResponsiveContainer>
                       </div>
                     </div>
+                    {/* 종합 편향 위험도 및 6축 점수 카드 */}
+                    <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-100">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold text-slate-900">종합 편향 위험도 (BRS)</h3>
+                        <div className={`text-2xl font-black ${brsInfo.textColor}`}>
+                          {Math.round(currentBrs)}<span className="text-sm text-slate-400 font-normal">/100</span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 mt-2">
+                        {comparisonRadarData.map((data, idx) => (
+                          <div key={idx} className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                            <span className="text-[11px] font-semibold text-slate-600">{data.subject}</span>
+                            <span className="text-sm font-bold text-indigo-600">{Math.round(data.B)}점</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+
 
                     {/* 지난 분석 대비 변화 추이 카드 */}
                     <div className="bg-white rounded-2xl shadow-sm p-6">
@@ -1934,49 +1953,6 @@ export default function DashboardLayout() {
                       <div className="bg-slate-50 border border-slate-200/60 p-3.5 rounded-lg text-xs">
                         <span className="font-bold text-slate-800">🥗 디톡스 실천 방향:</span>
                         <p className="text-indigo-600 font-semibold mt-1 text-[11px]">{dsao.detox}</p>
-                      </div>
-                    </div>
-                    </div>
-                    
-                    {/* 편향 위험도 및 세부 점수 카드 */}
-                    <div className="bg-white rounded-2xl shadow-sm p-6">
-                      <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                        <span>🚨</span> 편향 위험도 및 세부 지수
-                      </h3>
-                      <div className="flex items-end gap-3 mb-4">
-                        <div className="text-4xl font-black text-indigo-600">
-                          {scores?.brs ? Math.round(scores.brs) : 0}<span className="text-xl text-slate-400 font-bold">/100</span>
-                        </div>
-                        <div className="text-sm font-bold text-slate-500 mb-1">
-                          (전체 편향 위험도 BRS)
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="flex justify-between bg-slate-50 p-2 rounded border border-slate-100">
-                          <span className="text-slate-600">주제 다양성(TDS):</span>
-                          <span className="font-bold text-slate-900">{scores?.tds ? Math.round(scores.tds) : (scores?.diversity ? Math.round(scores.diversity) : 0)}점</span>
-                        </div>
-                        <div className="flex justify-between bg-slate-50 p-2 rounded border border-slate-100">
-                          <span className="text-slate-600">출처 균형(SBS):</span>
-                          <span className="font-bold text-slate-900">{scores?.sbs ? Math.round(scores.sbs) : (scores?.diversity ? Math.round(scores.diversity) : 0)}점</span>
-                        </div>
-                        <div className="flex justify-between bg-slate-50 p-2 rounded border border-slate-100">
-                          <span className="text-slate-600">감정 균형(EBS):</span>
-                          <span className="font-bold text-slate-900">{scores?.ebs ? Math.round(scores.ebs) : (scores?.stability ? Math.round(scores.stability) : 0)}점</span>
-                        </div>
-                        <div className="flex justify-between bg-slate-50 p-2 rounded border border-slate-100">
-                          <span className="text-slate-600">관점 개방(VOS):</span>
-                          <span className="font-bold text-slate-900">{scores?.vos ? Math.round(scores.vos) : (scores?.openness ? Math.round(scores.openness) : 0)}점</span>
-                        </div>
-                        <div className="flex justify-between bg-slate-50 p-2 rounded border border-slate-100">
-                          <span className="text-slate-600">유해 안전(SMS):</span>
-                          <span className="font-bold text-slate-900">{scores?.sms ? Math.round(scores.sms) : (scores?.stability ? Math.round(scores.stability) : 0)}점</span>
-                        </div>
-                        <div className="flex justify-between bg-slate-50 p-2 rounded border border-slate-100">
-                          <span className="text-slate-600">사용자 주도(UAS):</span>
-                          <span className="font-bold text-slate-900">{scores?.uas ? Math.round(scores.uas) : (scores?.proactivity ? Math.round(scores.proactivity) : 0)}점</span>
-                        </div>
                       </div>
                     </div>
                   </div>
