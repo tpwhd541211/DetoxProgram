@@ -1065,10 +1065,10 @@ export default function DashboardLayout() {
               {[
                 { tab: 'dashboard', icon: <Home size={20}/>, label: '대시보드' },
                 { tab: 'realtime', icon: <Activity size={20}/>, label: '시청 습관' },
-                { tab: 'persona', icon: <PieChartIcon size={20}/>, label: '성향 분석' },
+                { tab: 'persona', icon: <PieChartIcon size={20}/>, label: '심층 성향 분석' },
                 { tab: 'graph', icon: <Network size={20}/>, label: '관심사 지식 그래프' },
                 { tab: 'guide', icon: <Target size={20}/>, label: '디톡스 가이드' },
-                { tab: 'contents', icon: <Clock size={20}/>, label: '콘텐츠 분석' },
+                { tab: 'contents', icon: <Clock size={20}/>, label: '콘텐츠 세부 분석' },
               ].map(({ tab, icon, label }) => (
                 <li
                   key={tab}
@@ -1476,154 +1476,7 @@ export default function DashboardLayout() {
                     취소하고 대시보드로 돌아가기
                   </button>
                 )}
-                <button
-                  type="button"
-                  id="btn-demo-mode"
-                  onClick={() => {
-                    setStep("loading");
-                    setPollingStage("queued");
-                    setProgressPercent(15);
-                    
-                    setTimeout(() => {
-                      setPollingStage("parsing");
-                      setProgressPercent(35);
-                    }, 400);
-                    
-                    setTimeout(() => {
-                      setPollingStage("enriching");
-                      setProgressPercent(60);
-                    }, 800);
-                    
-                    setTimeout(() => {
-                      setPollingStage("scoring");
-                      setProgressPercent(80);
-                    }, 1200);
-                    
-                    setTimeout(() => {
-                      setPollingStage("report");
-                      setProgressPercent(90);
-                    }, 1600);
-                    
-                    setTimeout(() => {
-                      setPollingStage("saving");
-                      setProgressPercent(95);
-                    }, 2000);
-                    
-                    setTimeout(() => {
-                      setProgressPercent(100);
-                      setDatasetId("demo-dataset");
-                      setScores({
-                        diversity: 38.0,
-                        stability: 76.0,
-                        proactivity: 56.0,
-                        openness: 41.0,
-                        manipulation_index: 72.0,
-                        persona_type: "PNSF"
-                      });
-                      setReport({
-                        overall_summary: "특정 분야에 과도하게 매몰되어 다른 관점을 수용하지 못할 위험(확증편향)이 큽니다.",
-                        axis_comments: [
-                          "다양성 점수는 38/100으로 특정 장르에 지나치게 쏠림 현상이 관찰됩니다.",
-                          "안정성 점수는 76/100으로 비교적 안전한 영상을 시청하고 있습니다.",
-                          "주도성 점수는 56/100으로 추천 영상을 주로 소비합니다.",
-                          "개방성 점수는 41/100으로 고정된 취향을 가집니다."
-                        ],
-                        key_findings: "IT/테크 중심의 편향 시청이 관찰됩니다.",
-                        recommendations: "역방향 쿼리를 사용한 적극적 탐색이 필요합니다.",
-                        caution_notes: "알고리즘 필터 버블 주의",
-                        missions: [
-                          { mission_type: "역방향 쿼리", description: "인공지능의 윤리적 문제와 규제 필요성 영상을 검색하여 10분 이상 시청합니다.", success_condition: "관련 검색어로 동영상 시청 완료", suggested_query: "인공지능 윤리와 위험성" },
-                          { mission_type: "비구독 채널 탐색", description: "평소 전혀 구독하지 않는 경제 분야 인기 채널의 영상을 1개 시청합니다.", success_condition: "영상 시청 완료", suggested_query: "글로벌 매크로 경제" },
-                          { mission_type: "숏폼 탈출", description: "오늘 하루 유튜브 숏츠 시청 시간을 30분 이내로 조절합니다.", success_condition: "숏츠 시청 제한 달성", suggested_query: "집중력을 올리는 10가지 방법" }
-                        ]
-                      });
-                      setRealtimeData({
-                        time_distribution: [
-                          { hour: "09:00", total: 10, dopamine: 2 },
-                          { hour: "12:00", total: 15, dopamine: 14 },
-                          { hour: "15:00", total: 12, dopamine: 10 },
-                          { hour: "18:00", total: 20, dopamine: 5 },
-                          { hour: "21:00", total: 8, dopamine: 7 }
-                        ],
-                        peak_message: "당신은 11시부터 13시 사이에 도파민성 콘텐츠 시청률이 가장 높게 치솟습니다! 루틴 관리가 필요해요.",
-                        binge_sessions: [
-                          {
-                            date: "2024년 5월 15일",
-                            time_range: "12:20 ~ 16:40",
-                            duration_str: "4시간 20분",
-                            video_count: 45,
-                            main_keyword: "사건사고 뉴스",
-                            message: "무려 4시간 20분 동안 '사건사고 뉴스' 위주로 연속 시청했습니다."
-                          }
-                        ],
-                        timeline_data: [
-                          { date: '05/14', 편향위험도: 85, top_keyword: '정치/사회 비평' },
-                          { date: '05/15', 편향위험도: 90, top_keyword: '사건사고/이슈' },
-                          { date: '05/16', 편향위험도: 95, top_keyword: '자극성 예능 숏폼' },
-                          { date: '05/17', 편향위험도: 78, top_keyword: '연예/가십' },
-                          { date: '05/18', 편향위험도: 90, top_keyword: '정치/사회 비평' },
-                          { date: '05/19', 편향위험도: 68, top_keyword: '영화/드라마 리뷰' },
-                          { date: '05/20', 편향위험도: 72, top_keyword: 'IT/테크 리뷰' }
-                        ]
-                      });
-                      setPersonaData({
-                        type: "PNSF",
-                        weakness: "특정 분야에 과도하게 매몰되어 다른 관점을 수용하지 못할 위험(확증편향)이 큽니다.",
-                        ai_scores: { div: 38, sta: 76, ini: 56, ope: 41 },
-                        history: [ { month: '1월', objectivity: 70 }, { month: '3월', objectivity: 65 }, { month: '5월', objectivity: 56 } ]
-                      });
-                      setGraphData({
-                        nodes: [
-                          { id: 1, label: "인공지능", group: "tech", size: 30 },
-                          { id: 2, label: "기술/IT", group: "tech", size: 25 },
-                          { id: 3, label: "경제/금융", group: "economy", size: 20 },
-                          { id: 4, label: "딥러닝", group: "tech", size: 15 },
-                          { id: 5, label: "챗GPT", group: "tech", size: 15 },
-                          { id: 6, label: "AI 윤리", group: "tech", size: 15 },
-                          { id: 7, label: "투자/주식", group: "economy", size: 15 },
-                          { id: 8, label: "글로벌 경제", group: "economy", size: 15 },
-                          { id: 9, label: "생산성", group: "self", size: 15 },
-                          { id: 10, label: "마인드셋", group: "self", size: 15 }
-                        ],
-                        edges: [
-                          { source: 1, target: 4 }, { source: 1, target: 5 }, { source: 1, target: 6 },
-                          { source: 1, target: 2 }, { source: 2, target: 9 }, { source: 2, target: 10 },
-                          { source: 1, target: 3 }, { source: 3, target: 7 }, { source: 3, target: 8 },
-                          { source: 2, target: 8 }
-                        ]
-                      });
-                      setGuideData({
-                        streak_days: 12,
-                        daily_missions: [
-                          { id: 1, task: "반대 성향 영상 1개 끝까지 시청", completed: true },
-                          { id: 2, task: "구독하지 않은 채널 영상 시청", completed: true },
-                          { id: 3, task: "숏폼 영상 30분 미만 시청", completed: false }
-                        ],
-                        streak_history: []
-                      });
-                      setContents({
-                        watch_history: [
-                          { id: 1, title: "인공지능 혁명과 인간 존엄성에 대한 철학적 성찰", channel_name: "인문학 명강의", watch_time: new Date().toISOString(), video_id: "", dopamine_tag: "🧘 저도파민/유익" },
-                          { id: 2, title: "[쇼츠] 롤 펜타킬 역대급 피지컬 순간 모음", channel_name: "게이머TV", watch_time: new Date().toISOString(), video_id: "", dopamine_tag: "⚡ 고도파민" },
-                          { id: 3, title: "글로벌 거시 경제 리스크 진단 및 자산 배분 전략", channel_name: "삼프로티비", watch_time: new Date().toISOString(), video_id: "", dopamine_tag: "🧘 저도파민/유익" },
-                          { id: 4, title: "경악을 금치 못하는 충격 폭로 실태 단독 보도", channel_name: "연예이슈뉴스", watch_time: new Date().toISOString(), video_id: "", dopamine_tag: "⚡ 고도파민" }
-                        ],
-                        top_channels: [
-                          { name: "게이머TV", count: 18, percentage: 38.0 },
-                          { name: "연예이슈뉴스", count: 12, percentage: 25.0 },
-                          { name: "삼프로티비", count: 9, percentage: 19.0 },
-                          { name: "인문학 명강의", count: 5, percentage: 10.0 },
-                          { name: "기타 채널", count: 4, percentage: 8.0 }
-                        ]
-                      });
-                      setStep("dashboard");
-                      setActiveTab("dashboard");
-                    }, 2400);
-                  }}
-                  className="w-full text-indigo-600 hover:text-indigo-800 font-semibold py-2 rounded-xl transition-colors text-sm border border-indigo-100 hover:bg-indigo-50/30"
-                >
-                  데모 모드로 시작하기
-                </button>
+
               </div>
             </div>
           )}
@@ -1976,88 +1829,6 @@ export default function DashboardLayout() {
                 </div>
               )}
 
-              {/* === REALTIME TAB === */}
-              {activeTab === 'realtime' && (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 xl:gap-6">
-                  {/* Left Column: Peak message & Bar chart */}
-                  <div className="flex flex-col gap-4 xl:gap-6">
-                    {/* Peak Message Alert */}
-                    <div className="bg-red-50 border-l-4 border-red-500 rounded-r-2xl p-6 shadow-sm relative overflow-hidden">
-                      <div className="absolute top-0 right-0 p-4 opacity-10 text-4xl">🚨</div>
-                      <h3 className="font-bold text-red-900 mb-2 flex items-center gap-2">
-                        <span className="text-xl">⚠️</span> 취약 시간대 경고
-                      </h3>
-                      <p className="text-red-800 font-medium leading-relaxed">
-                        {realtimeData?.peak_message || "분석 중입니다..."}
-                      </p>
-                    </div>
-                    
-                    {/* Bar Chart for 24h Habit */}
-                    <div className="bg-white rounded-2xl shadow-sm p-6 flex-1 border border-slate-100">
-                      <h3 className="font-bold text-slate-900 mb-6 flex items-center justify-between">
-                        <span>나의 24시간 시청 생체리듬</span>
-                        <span className="text-xs font-normal text-slate-400">총 시청 vs 고도파민 시청</span>
-                      </h3>
-                      <div className="w-full h-72">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={realtimeData?.time_distribution || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} />
-                            <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} />
-                            <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                            <Bar dataKey="total" name="전체 시청" fill="#e2e8f0" radius={[4, 4, 0, 0]} barSize={20} />
-                            <Bar dataKey="dopamine" name="고도파민 시청" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={20} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Right Column: Binge Sessions */}
-                  <div className="flex flex-col gap-4 xl:gap-6">
-                    <div className="bg-white rounded-2xl shadow-sm p-6 flex-1 border border-slate-100">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                          <span className="text-xl">🍿</span> 최악의 도파민 폭식 세션
-                        </h3>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        {realtimeData?.binge_sessions?.length > 0 ? (
-                          realtimeData.binge_sessions.map((session: any, idx: number) => (
-                            <div key={idx} className="bg-slate-50 border border-slate-100 rounded-xl p-5 hover:border-red-200 hover:shadow-sm transition-all group">
-                              <div className="flex items-start justify-between mb-3">
-                                <div>
-                                  <div className="text-xs font-bold text-slate-400 mb-1">{session.date} • {session.time_range}</div>
-                                  <h4 className="font-bold text-slate-800 text-lg group-hover:text-red-600 transition-colors">
-                                    {session.duration_str} 연속 시청
-                                  </h4>
-                                </div>
-                                <div className="bg-red-100 text-red-600 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1">
-                                  <span>🔥</span> {session.video_count}개 시청
-                                </div>
-                              </div>
-                              
-                              <div className="bg-white rounded-lg p-3 border border-slate-100 flex items-start gap-3">
-                                <div className="text-2xl mt-1">🕵️</div>
-                                <div>
-                                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">주범 키워드 / 채널</div>
-                                  <div className="text-sm font-bold text-slate-700">{session.message}</div>
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-12 text-slate-400">
-                            <span className="text-4xl block mb-3">🌱</span>
-                            <p>연속 시청 기록이 없습니다. 아주 훌륭해요!</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* === PERSONA TAB === */}
               {activeTab === 'persona' && (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 xl:gap-6">
@@ -2116,7 +1887,7 @@ export default function DashboardLayout() {
                     </div>
                     <div className="bg-white rounded-2xl shadow-sm p-6 flex-1 flex flex-col justify-between">
                       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                        <h3 className="font-bold text-slate-900">알고리즘 성향 상세 분석 ({personaType})</h3>
+                        <h3 className="font-bold text-slate-900">알고리즘 성향 (DSAO)</h3>
                         {personaData && personaData.type !== "UNKN" && personaData.confidence !== undefined && (
                           <div className="flex items-center gap-1.5">
                             <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
@@ -2138,7 +1909,7 @@ export default function DashboardLayout() {
                             {dsao.character}
                           </div>
                           <div>
-                            <h4 className="font-bold text-sm text-slate-900">{dsao.alias}</h4>
+                            <h4 className="font-bold text-sm text-slate-900">{dsao.alias} ({personaType})</h4>
                             <p className="text-xs text-slate-400">{dsao.name}</p>
                           </div>
                         </div>
@@ -2163,6 +1934,49 @@ export default function DashboardLayout() {
                       <div className="bg-slate-50 border border-slate-200/60 p-3.5 rounded-lg text-xs">
                         <span className="font-bold text-slate-800">🥗 디톡스 실천 방향:</span>
                         <p className="text-indigo-600 font-semibold mt-1 text-[11px]">{dsao.detox}</p>
+                      </div>
+                    </div>
+                    </div>
+                    
+                    {/* 편향 위험도 및 세부 점수 카드 */}
+                    <div className="bg-white rounded-2xl shadow-sm p-6">
+                      <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <span>🚨</span> 편향 위험도 및 세부 지수
+                      </h3>
+                      <div className="flex items-end gap-3 mb-4">
+                        <div className="text-4xl font-black text-indigo-600">
+                          {scores?.brs ? Math.round(scores.brs) : 0}<span className="text-xl text-slate-400 font-bold">/100</span>
+                        </div>
+                        <div className="text-sm font-bold text-slate-500 mb-1">
+                          (전체 편향 위험도 BRS)
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex justify-between bg-slate-50 p-2 rounded border border-slate-100">
+                          <span className="text-slate-600">주제 다양성(TDS):</span>
+                          <span className="font-bold text-slate-900">{scores?.tds ? Math.round(scores.tds) : (scores?.diversity ? Math.round(scores.diversity) : 0)}점</span>
+                        </div>
+                        <div className="flex justify-between bg-slate-50 p-2 rounded border border-slate-100">
+                          <span className="text-slate-600">출처 균형(SBS):</span>
+                          <span className="font-bold text-slate-900">{scores?.sbs ? Math.round(scores.sbs) : (scores?.diversity ? Math.round(scores.diversity) : 0)}점</span>
+                        </div>
+                        <div className="flex justify-between bg-slate-50 p-2 rounded border border-slate-100">
+                          <span className="text-slate-600">감정 균형(EBS):</span>
+                          <span className="font-bold text-slate-900">{scores?.ebs ? Math.round(scores.ebs) : (scores?.stability ? Math.round(scores.stability) : 0)}점</span>
+                        </div>
+                        <div className="flex justify-between bg-slate-50 p-2 rounded border border-slate-100">
+                          <span className="text-slate-600">관점 개방(VOS):</span>
+                          <span className="font-bold text-slate-900">{scores?.vos ? Math.round(scores.vos) : (scores?.openness ? Math.round(scores.openness) : 0)}점</span>
+                        </div>
+                        <div className="flex justify-between bg-slate-50 p-2 rounded border border-slate-100">
+                          <span className="text-slate-600">유해 안전(SMS):</span>
+                          <span className="font-bold text-slate-900">{scores?.sms ? Math.round(scores.sms) : (scores?.stability ? Math.round(scores.stability) : 0)}점</span>
+                        </div>
+                        <div className="flex justify-between bg-slate-50 p-2 rounded border border-slate-100">
+                          <span className="text-slate-600">사용자 주도(UAS):</span>
+                          <span className="font-bold text-slate-900">{scores?.uas ? Math.round(scores.uas) : (scores?.proactivity ? Math.round(scores.proactivity) : 0)}점</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2436,7 +2250,89 @@ export default function DashboardLayout() {
 
               {/* === CONTENTS TAB === */}
               {activeTab === 'contents' && (
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 xl:gap-6">
+                <div className="flex flex-col gap-8">
+                  {/* --- REALTIME DATA --- */}
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 xl:gap-6">
+                  {/* Left Column: Peak message & Bar chart */}
+                  <div className="flex flex-col gap-4 xl:gap-6">
+                    {/* Peak Message Alert */}
+                    <div className="bg-red-50 border-l-4 border-red-500 rounded-r-2xl p-6 shadow-sm relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-4 opacity-10 text-4xl">🚨</div>
+                      <h3 className="font-bold text-red-900 mb-2 flex items-center gap-2">
+                        <span className="text-xl">⚠️</span> 취약 시간대 경고
+                      </h3>
+                      <p className="text-red-800 font-medium leading-relaxed">
+                        {realtimeData?.peak_message || "분석 중입니다..."}
+                      </p>
+                    </div>
+                    
+                    {/* Bar Chart for 24h Habit */}
+                    <div className="bg-white rounded-2xl shadow-sm p-6 flex-1 border border-slate-100">
+                      <h3 className="font-bold text-slate-900 mb-6 flex items-center justify-between">
+                        <span>나의 24시간 시청 생체리듬</span>
+                        <span className="text-xs font-normal text-slate-400">총 시청 vs 고도파민 시청</span>
+                      </h3>
+                      <div className="w-full h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={realtimeData?.time_distribution || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} />
+                            <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} />
+                            <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                            <Bar dataKey="total" name="전체 시청" fill="#e2e8f0" radius={[4, 4, 0, 0]} barSize={20} />
+                            <Bar dataKey="dopamine" name="고도파민 시청" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={20} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Right Column: Binge Sessions */}
+                  <div className="flex flex-col gap-4 xl:gap-6">
+                    <div className="bg-white rounded-2xl shadow-sm p-6 flex-1 border border-slate-100">
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                          <span className="text-xl">🍿</span> 최악의 도파민 폭식 세션
+                        </h3>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        {realtimeData?.binge_sessions?.length > 0 ? (
+                          realtimeData.binge_sessions.map((session: any, idx: number) => (
+                            <div key={idx} className="bg-slate-50 border border-slate-100 rounded-xl p-5 hover:border-red-200 hover:shadow-sm transition-all group">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <div className="text-xs font-bold text-slate-400 mb-1">{session.date} • {session.time_range}</div>
+                                  <h4 className="font-bold text-slate-800 text-lg group-hover:text-red-600 transition-colors">
+                                    {session.duration_str} 연속 시청
+                                  </h4>
+                                </div>
+                                <div className="bg-red-100 text-red-600 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1">
+                                  <span>🔥</span> {session.video_count}개 시청
+                                </div>
+                              </div>
+                              
+                              <div className="bg-white rounded-lg p-3 border border-slate-100 flex items-start gap-3">
+                                <div className="text-2xl mt-1">🕵️</div>
+                                <div>
+                                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">주범 키워드 / 채널</div>
+                                  <div className="text-sm font-bold text-slate-700">{session.message}</div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-12 text-slate-400">
+                            <span className="text-4xl block mb-3">🌱</span>
+                            <p>연속 시청 기록이 없습니다. 아주 훌륭해요!</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                  {/* --- CONTENTS DATA --- */}
+                  <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 xl:gap-6">
                   {/* Left Column: Watch History */}
                   <div className="xl:col-span-8 bg-white rounded-2xl shadow-sm p-5 flex flex-col min-h-[400px] xl:h-[600px]">
                     <div className="flex justify-between items-center mb-6">
@@ -2539,6 +2435,7 @@ export default function DashboardLayout() {
                       </button>
                     </div>
                   </div>
+                </div>
                 </div>
               )}
 
