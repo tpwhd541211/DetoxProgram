@@ -22,7 +22,16 @@ from infrastructure.youtube_service import enrich_events_with_meta
 from domain.analysis.nlp_service import analyze_session_text
 
 def run_whitebox_test():
-    filepath = r"C:\Users\Administrator\Desktop\UnbelievableTeamProject\others\시청 기록.html"
+    # Dynamically find others/시청 기록.html relative to this file
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    project_dir = os.path.dirname(backend_dir)
+    root_dir = os.path.dirname(project_dir)
+    filepath = os.path.join(root_dir, "others", "시청 기록.html")
+    
+    if not os.path.exists(filepath):
+        # Fallback to hardcoded path
+        filepath = r"C:\Users\Administrator\Desktop\UnbelievableTeamProject\others\시청 기록.html"
+        
     print(f"Loading file: {filepath}", flush=True)
     with open(filepath, "rb") as f:
         file_content = f.read()

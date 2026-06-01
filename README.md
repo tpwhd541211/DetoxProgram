@@ -44,6 +44,23 @@
 
 ## 💻 실행 방법 (Getting Started)
 
+### 🐳 방법 A. Docker Compose를 통한 원클릭 통합 실행 (외부 공유 추천)
+Nginx 역방향 프록시를 사용해 프론트엔드와 백엔드를 싱글 포트(`8080`)로 바인딩하여 실행합니다. 외부 사람들에게 공유할 때 최적화된 방식입니다.
+
+```bash
+# 프로젝트 루트 폴더 이동
+cd DetoxProgram
+
+# 도커 컴포즈 빌드 및 실행 (프론트엔드, 백엔드, Nginx 통합)
+docker compose up --build
+```
+*   **통합 서비스 주소**: `http://localhost:8080`
+*   외부에 안전한 HTTPS로 주소를 즉시 공유하려면 [외부 공유 가이드(SHARE_GUIDE.md)](file:///c:/Users/Administrator/Desktop/UnbelievableTeamProject/SHARE_GUIDE.md)를 참조하십시오.
+
+---
+
+### 💻 방법 B. 개발 모드로 개별 수동 실행
+
 ### 1. 백엔드 실행 (FastAPI)
 ```bash
 # 백엔드 디렉토리 이동
@@ -62,7 +79,7 @@ python init_db.py
 # uvicorn 서버 실행
 uvicorn main:app --reload
 ```
-* **백엔드 주소**: `http://localhost:8000`
+*   **백엔드 주소**: `http://localhost:8000`
 
 ### 2. 프론트엔드 실행 (Next.js)
 ```bash
@@ -75,7 +92,7 @@ npm install
 # 개발 서버 실행
 npm run dev
 ```
-* **프론트엔드 주소**: `http://localhost:3000`
+*   **프론트엔드 주소**: `http://localhost:3000`
 
 ---
 

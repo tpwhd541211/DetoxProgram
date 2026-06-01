@@ -98,37 +98,52 @@ def get_okt():
     global _okt
     if _okt is None:
         try:
-            import ctypes
-            def get_short_path(long_path):
+            import platform
+            is_windows = platform.system() == "Windows"
+            
+            if is_windows:
+                import ctypes
+                def get_short_path(long_path):
+                    try:
+                        buf = ctypes.create_unicode_buffer(1024)
+                        ctypes.windll.kernel32.GetShortPathNameW(long_path, buf, 1024)
+                        return buf.value if buf.value else long_path
+                    except Exception:
+                        return long_path
+                new_paths = []
+                for p in sys.path:
+                    if " " in p:
+                        new_paths.append(get_short_path(p))
+                    else:
+                        new_paths.append(p)
+                sys.path = new_paths
+                
+                # Use environment variable JAVA_HOME first, fallback to default path
+                java_home = os.environ.get("JAVA_HOME", r"C:\Program Files\Eclipse Adoptium\jdk-17.0.18.8-hotspot")
+                if os.path.exists(java_home):
+                    short_java = get_short_path(java_home)
+                    os.environ["JAVA_HOME"] = short_java
+                    os.environ["PATH"] = (
+                        os.path.join(short_java, "bin") + os.pathsep +
+                        os.path.join(short_java, "bin", "server") + os.pathsep +
+                        os.environ.get("PATH", "")
+                    )
+                
+                old_cwd = os.getcwd()
+                # On Windows, try changing CWD to a path without spaces (like user profile or temp)
+                win_temp = os.environ.get("USERPROFILE", os.environ.get("TEMP", "C:\\"))
+                safe_cwd = get_short_path(win_temp)
                 try:
-                    buf = ctypes.create_unicode_buffer(1024)
-                    ctypes.windll.kernel32.GetShortPathNameW(long_path, buf, 1024)
-                    return buf.value if buf.value else long_path
-                except Exception:
-                    return long_path
-            new_paths = []
-            for p in sys.path:
-                if " " in p:
-                    new_paths.append(get_short_path(p))
-                else:
-                    new_paths.append(p)
-            sys.path = new_paths
-            java_home = r"C:\Program Files\Eclipse Adoptium\jdk-17.0.18.8-hotspot"
-            if os.path.exists(java_home):
-                short_java = get_short_path(java_home)
-                os.environ["JAVA_HOME"] = short_java
-                os.environ["PATH"] = (
-                    os.path.join(short_java, "bin") + os.pathsep +
-                    os.path.join(short_java, "bin", "server") + os.pathsep +
-                    os.environ.get("PATH", "")
-                )
-            old_cwd = os.getcwd()
-            try:
-                os.chdir(r"C:\Users\Administrator")
+                    if os.path.exists(safe_cwd):
+                        os.chdir(safe_cwd)
+                    from konlpy.tag import Okt
+                    _okt = Okt()
+                finally:
+                    os.chdir(old_cwd)
+            else:
+                # On non-Windows platforms (Linux, macOS, Docker), just import Okt directly
                 from konlpy.tag import Okt
                 _okt = Okt()
-            finally:
-                os.chdir(old_cwd)
         except Exception as e:
             print(f"KoNLPy fallback initialization failed: {e}")
     return _okt

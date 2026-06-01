@@ -3,16 +3,11 @@ import os
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-from dotenv import load_dotenv
-load_dotenv(encoding="utf-8", override=True)
+from core.config import settings
 
 path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
-abs_path = os.path.abspath(path)
-print("Path:", path)
-print("Abs Path:", abs_path)
-print("Exists:", os.path.exists(abs_path))
-
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = abs_path
+print("Resolved GOOGLE_APPLICATION_CREDENTIALS path:", path)
+print("Exists:", os.path.exists(path))
 
 try:
     from google.cloud import language_v2
@@ -26,3 +21,4 @@ try:
     print("API called successfully:", type(response))
 except Exception as e:
     print("GCP failed:", str(e))
+

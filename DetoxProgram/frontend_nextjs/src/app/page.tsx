@@ -1,6 +1,8 @@
 "use client";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL = typeof window !== "undefined"
+  ? (window.location.port === "3000" ? "http://localhost:8000" : window.location.origin)
+  : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000");
 
 import { useState, useEffect, useRef } from "react";
 import { UploadCloud, Bell, Calendar, Home, Activity, PieChart as PieChartIcon, Network, Target, Clock, Settings, CheckCircle2, Circle } from "lucide-react";
@@ -529,6 +531,23 @@ export default function DashboardLayout() {
         }
       } else {
         setStep("login");
+        // Reset user states
+        setDatasetId(null);
+        setScores(null);
+        setReport(null);
+        setRealtimeData(null);
+        setPersonaData(null);
+        setGraphData(null);
+        setGuideData(null);
+        setContents(null);
+        setFile(null);
+        setSurveyData({ div: 50, sta: 50, ini: 50, ope: 50 });
+        setCompletedMissions(new Set());
+        setUploadProgress(0);
+        setProgressPercent(0);
+        setPollingStage("queued");
+        setSelectedNode(null);
+        setIsReupload(false);
       }
     });
 
@@ -543,6 +562,24 @@ export default function DashboardLayout() {
         setSession(null);
         setStep("login");
         hasCheckedReport.current = false;
+        
+        // Reset user states
+        setDatasetId(null);
+        setScores(null);
+        setReport(null);
+        setRealtimeData(null);
+        setPersonaData(null);
+        setGraphData(null);
+        setGuideData(null);
+        setContents(null);
+        setFile(null);
+        setSurveyData({ div: 50, sta: 50, ini: 50, ope: 50 });
+        setCompletedMissions(new Set());
+        setUploadProgress(0);
+        setProgressPercent(0);
+        setPollingStage("queued");
+        setSelectedNode(null);
+        setIsReupload(false);
       }
     });
 
@@ -947,10 +984,12 @@ export default function DashboardLayout() {
 
   // Checklist handler
   const handleMissionCheck = async (idx: number) => {
+    // 이미 완료된 미션은 다시 클릭해도 해제되지 않도록 방지
+    if (completedMissions.has(idx)) return;
+
     // 1. 상태 업데이트 전, 현재 값을 바탕으로 새 배열 계산 (비동기 안전성)
     const nextSet = new Set(completedMissions);
-    if (nextSet.has(idx)) nextSet.delete(idx);
-    else nextSet.add(idx);
+    nextSet.add(idx);
     
     const nextArr = Array.from(nextSet);
     
@@ -1885,7 +1924,9 @@ export default function DashboardLayout() {
                             <div 
                               key={idx} 
                               onClick={() => {
-                                handleMissionCheck(idx);
+                                if (!isCompleted) {
+                                  handleMissionCheck(idx);
+                                }
                                 window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(getSuggestedQuery(m))}`, '_blank');
                               }}
                               className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
@@ -1903,10 +1944,6 @@ export default function DashboardLayout() {
                                 {getSuggestedQuery(m)}
                               </div>
                               <span 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(getSuggestedQuery(m))}`, '_blank');
-                                }}
                                 className={`text-[10px] px-2 py-0.5 rounded font-bold transition-colors ${
                                   isCompleted ? 'text-emerald-600 bg-emerald-100 hover:bg-emerald-200' : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100'
                                 }`}

@@ -19,6 +19,7 @@
 **/tidal-sum-*.json
 **/*.zip
 **/test_out*.json
+**/API.txt
 
 # IDEs
 **/.vscode/
@@ -30,3 +31,9 @@
 **/.next/
 **/out/
 **/build/
+
+# Ignore local directories
+others/
+outputs/
+*.zip
+

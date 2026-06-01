@@ -1,9 +1,14 @@
 FROM python:3.11-slim
 
-# Install system dependencies if needed
+# Install system dependencies, including OpenJDK JRE for KoNLPy
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    default-jre \
     && rm -rf /var/lib/apt/lists/*
+
+# Set JAVA_HOME pointing to the JRE installation path in debian/ubuntu
+ENV JAVA_HOME=/usr/lib/jvm/default-java
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
 WORKDIR /app
 
