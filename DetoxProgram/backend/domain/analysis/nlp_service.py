@@ -261,7 +261,11 @@ def analyze_text_with_gcp(text, language_hint="ko"):
     if not text or not text.strip():
         return None
     try:
-        client = language_v2.LanguageServiceClient()
+        from core.config import settings
+        if settings.GCP_API_KEY:
+            client = language_v2.LanguageServiceClient(client_options={"api_key": settings.GCP_API_KEY})
+        else:
+            client = language_v2.LanguageServiceClient()
         document = language_v2.Document(
             content=text,
             type_=language_v2.Document.Type.PLAIN_TEXT

@@ -8,6 +8,7 @@ class Settings:
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./test.db")
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GOOGLE_APPLICATION_CREDENTIALS: str = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
+    GCP_API_KEY: str = os.getenv("GCP_API_KEY", "")
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", "https://ttxkknefkcepctezomvh.supabase.co")
     SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "sb_publishable_LBhJq0wk1zRS3EVCLHLpEw_mSgYj_hD")
 
