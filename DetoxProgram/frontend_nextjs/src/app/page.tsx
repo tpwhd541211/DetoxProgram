@@ -1064,10 +1064,9 @@ export default function DashboardLayout() {
             <ul className="space-y-1">
               {[
                 { tab: 'dashboard', icon: <Home size={20}/>, label: '대시보드' },
-                { tab: 'realtime', icon: <Activity size={20}/>, label: '시청 습관' },
                 { tab: 'persona', icon: <PieChartIcon size={20}/>, label: '심층 성향 분석' },
                 { tab: 'graph', icon: <Network size={20}/>, label: '관심사 지식 그래프' },
-                { tab: 'guide', icon: <Target size={20}/>, label: '디톡스 가이드' },
+                { tab: 'guide', icon: <Target size={20}/>, label: '오늘의 디톡스 가이드' },
                 { tab: 'contents', icon: <Clock size={20}/>, label: '콘텐츠 세부 분석' },
               ].map(({ tab, icon, label }) => (
                 <li
@@ -1112,17 +1111,17 @@ export default function DashboardLayout() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
               {activeTab === 'dashboard' && '대시보드'}
-              {activeTab === 'realtime' && '시청 습관'}
               {activeTab === 'persona' && '심층 성향 분석'}
               {activeTab === 'graph' && '관심사 지식 그래프'}
-              {activeTab === 'guide' && '디톡스 가이드'}
+              {activeTab === 'guide' && '오늘의 디톡스 가이드'}
               {activeTab === 'contents' && '콘텐츠 세부 분석'}
               {activeTab === 'settings' && '설정 및 관리'}
             </h1>
             <p className="text-sm text-slate-500">AI가 분석한 당신의 콘텐츠 소비 패턴을 확인하세요.</p>
           </div>
           <div className="flex items-center gap-4">
-            <button
+            {session && (
+<button
               onClick={() => {
                 setIsReupload(true);
                 setStep("upload");
@@ -1132,6 +1131,7 @@ export default function DashboardLayout() {
             >
               <UploadCloud size={16} /> 재업로드
             </button>
+            )}
             <Bell className="text-slate-500 cursor-pointer hover:text-slate-700 transition-colors" onClick={() => alert("알림: 새로운 분석 리포트가 도착했습니다!")} />
             <div className="border border-slate-300 rounded-lg px-4 py-2 text-sm font-semibold flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => alert("기간 설정 기능은 프로 버전에서 제공됩니다.")}>
               <Calendar size={16} /> 2026.05.14 ~ 2026.05.20
@@ -1762,7 +1762,7 @@ export default function DashboardLayout() {
 
                   <div className="md:col-span-1 xl:col-span-2 bg-white rounded-2xl shadow-sm p-5 min-h-[320px] xl:min-h-[400px] flex flex-col">
                     <div className="flex justify-between items-center mb-2">
-                      <h3 className="font-bold text-slate-900">디톡스 미션</h3>
+                      <h3 className="font-bold text-slate-900">오늘의 디톡스 가이드</h3>
                       <span className="text-xs text-indigo-600 font-bold hover:underline cursor-pointer" onClick={() => setActiveTab("guide")}>전체 보기 &gt;</span>
                     </div>
                     <div className="flex gap-6 items-center flex-1">
@@ -2406,9 +2406,7 @@ export default function DashboardLayout() {
                       <button 
                         onClick={() => setActiveTab("guide")}
                         className="w-full bg-white text-indigo-950 font-bold py-3 rounded-xl hover:bg-slate-100 transition-colors text-xs mt-6"
-                      >
-                        디톡스 미션 수행하기
-                      </button>
+                      >오늘의 디톡스 가이드 보러가기</button>
                     </div>
                   </div>
                 </div>
