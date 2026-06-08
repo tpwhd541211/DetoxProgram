@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from core.database import SessionLocal
-from models.schemas import ScoreRun, ReportSnapshot, NLPResult, NormEvent, RawEvent, AnalysisJob, RawFile, ConsentLog, AuditLog, MissionLog, UserSession, UserStreak
+from models.schemas import ScoreRun, ReportSnapshot, NLPResult, NormEvent, RawEvent, AnalysisJob, ConsentLog, AuditLog, MissionLog, UserSession, UserStreak
 from core.security import get_current_user
 
 router = APIRouter()
@@ -41,7 +41,6 @@ async def delete_user_dataset(
         db.query(ScoreRun).filter(ScoreRun.dataset_id == dataset_id).delete(synchronize_session=False)
         db.query(ReportSnapshot).filter(ReportSnapshot.dataset_id == dataset_id).delete(synchronize_session=False)
         db.query(AnalysisJob).filter(AnalysisJob.dataset_id == dataset_id).delete(synchronize_session=False)
-        db.query(RawFile).filter(RawFile.dataset_id == dataset_id).delete(synchronize_session=False)
         db.query(UserSession).filter(UserSession.dataset_id == dataset_id).delete(synchronize_session=False)
         db.query(UserStreak).filter(UserStreak.user_id == current_user).delete(synchronize_session=False)
         db.query(MissionLog).filter(MissionLog.plan_id == current_user).delete(synchronize_session=False)
@@ -137,11 +136,6 @@ async def reset_user_data(
         for j in jobs:
             if j.dataset_id not in dataset_ids:
                 dataset_ids.append(j.dataset_id)
-                
-        files = db.query(RawFile).filter(RawFile.user_id == current_user).all()
-        for f in files:
-            if f.dataset_id not in dataset_ids:
-                dataset_ids.append(f.dataset_id)
 
         # Delete from dependent tables using dataset_ids
         if dataset_ids:
@@ -151,7 +145,6 @@ async def reset_user_data(
             db.query(ScoreRun).filter(ScoreRun.dataset_id.in_(dataset_ids)).delete(synchronize_session=False)
             db.query(ReportSnapshot).filter(ReportSnapshot.dataset_id.in_(dataset_ids)).delete(synchronize_session=False)
             db.query(AnalysisJob).filter(AnalysisJob.dataset_id.in_(dataset_ids)).delete(synchronize_session=False)
-            db.query(RawFile).filter(RawFile.dataset_id.in_(dataset_ids)).delete(synchronize_session=False)
             db.query(UserSession).filter(UserSession.dataset_id.in_(dataset_ids)).delete(synchronize_session=False)
 
         # Delete user-scoped tables

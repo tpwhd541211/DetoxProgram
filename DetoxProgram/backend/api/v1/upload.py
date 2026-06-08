@@ -17,6 +17,16 @@ router = APIRouter()
 def save_to_db(dataset_id: str, user_id: str, raw_events, normalized_events, sessions, scores, report_data):
     db = SessionLocal()
     try:
+        if isinstance(report_data, dict):
+            report_data = {
+                **report_data,
+                "brs_factors": scores.get("brs_factors", []),
+                "brs_base": scores.get("brs_base"),
+                "brs_penalty": scores.get("brs_penalty"),
+                "analysis_status": scores.get("analysis_status"),
+                "data_quality": scores.get("data_quality"),
+            }
+
         # 1. RawEvent 저장
         raw_events_serializable = []
         for ev in raw_events:
@@ -86,20 +96,13 @@ def save_to_db(dataset_id: str, user_id: str, raw_events, normalized_events, ses
         db_score = ScoreRun(
             dataset_id=dataset_id,
             user_id=user_id,
-            diversity=scores.get("diversity", 0.0),
-            stability=scores.get("stability", 0.0),
-            proactivity=scores.get("proactivity", 0.0),
-            openness=scores.get("openness", 0.0),
-            manipulation_index=scores.get("manipulation_index", 0.0),
-            
-            tds=scores.get("tds", 50.0),
-            sbs=scores.get("sbs", 50.0),
-            ebs=scores.get("ebs", 50.0),
-            vos=scores.get("vos", 50.0),
-            sms=scores.get("sms", 50.0),
-            uas=scores.get("uas", 50.0),
-            brs=scores.get("brs", 0.0),
-            
+            tds=scores.get("tds"),
+            sbs=scores.get("sbs"),
+            ebs=scores.get("ebs"),
+            vos=scores.get("vos"),
+            sms=scores.get("sms"),
+            uas=scores.get("uas"),
+            brs=scores.get("brs"),
             persona_type=scores.get("persona_type", "UNKN")
         )
         db.add(db_score)

@@ -5,9 +5,9 @@ const API_BASE_URL = typeof window !== "undefined"
   : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000");
 
 import { useState, useEffect, useRef } from "react";
-import { UploadCloud, Bell, Calendar, Home, Activity, PieChart as PieChartIcon, Network, Target, Clock, Settings, CheckCircle2, Circle } from "lucide-react";
+import { UploadCloud, Bell, Calendar, Home, PieChart as PieChartIcon, Network, Target, Clock, Settings } from "lucide-react";
 import DeveloperInspector from "@/components/DeveloperInspector";
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, PieChart as RePieChart, Pie, Cell, LineChart, Line, BarChart, Bar } from 'recharts';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, PieChart as RePieChart, Pie, Cell, LineChart, Line, BarChart, Bar } from 'recharts';
 import { supabase } from "@/lib/supabase";
 
 const DSAO_TYPES: Record<string, {
@@ -162,20 +162,29 @@ const DSAO_TYPES: Record<string, {
     risks: ["직접 선택보다 추천 흐름에 의존할 수 있음", "비슷한 콘텐츠만 계속 볼 수 있음", "시청 시간이 길어질 수 있음"],
     detox: "추천 정주행 후 직접 검색으로 다음 학습 주제를 선택하기",
     character: "🪵"
+  },
+  "UNKN": {
+    name: "분석 보류 (데이터 부족)",
+    alias: "아기 탐험가",
+    desc: "유튜브 시청 기록 데이터의 모수가 부족하여 아직 알고리즘 성향을 정확히 구분할 수 없습니다. 시청 기록 데이터를 추가로 업로드해주시면 정밀한 분석 리포트가 활성화됩니다.",
+    strengths: ["분석 데이터 누적 진행 중"],
+    risks: ["일시적으로 성향 확인 불가"],
+    detox: "유튜브 데이터를 좀 더 사용하신 후, 좀 더 축적된 데이터를 내려받아 다시 업로드해보기",
+    character: "🥚"
   }
 };
 
 const getDsaoInfo = (code: string) => {
   const defaultInfo = {
-    name: "추천형 고자극 집중형",
-    alias: "알고리즘 도파민 루프",
-    desc: "추천 피드 안에서 특정 자극 주제의 짧은 콘텐츠를 반복 소비하는 유형입니다.",
-    strengths: ["관심 주제에 빠르게 반응함", "트렌드 변화에 민감함", "짧은 콘텐츠에서 핵심 자극을 빠르게 포착함"],
-    risks: ["추천 피드에 의해 비슷한 자극이 반복 강화될 수 있음", "관점 다양성이 낮아질 수 있음", "짧은 영상 반복으로 시간 통제력이 약해질 수 있음"],
-    detox: "추천 영상 3개를 본 뒤 직접 검색한 균형 콘텐츠 1개를 추가로 보기",
-    character: "🔄"
+    name: "분석 보류 (데이터 부족)",
+    alias: "아기 탐험가",
+    desc: "유튜브 시청 기록 데이터의 모수가 부족하여 아직 알고리즘 성향을 정확히 구분할 수 없습니다. 시청 기록 데이터를 추가로 업로드해주시면 정밀한 분석 리포트가 활성화됩니다.",
+    strengths: ["분석 데이터 누적 진행 중"],
+    risks: ["일시적으로 성향 확인 불가"],
+    detox: "유튜브 데이터를 좀 더 사용하신 후, 좀 더 축적된 데이터를 내려받아 다시 업로드해보기",
+    character: "🥚"
   };
-  const key = code ? code.trim().toUpperCase() : "PNSF";
+  const key = code ? code.trim().toUpperCase() : "UNKN";
   return DSAO_TYPES[key] || defaultInfo;
 };
 
@@ -478,7 +487,7 @@ function InteractiveForceGraph({ graphData, setSelectedNode, variant = 'full' }:
 export default function DashboardLayout() {
   // Navigation & Wizard Steps
   const [step, setStep] = useState<"login" | "consent" | "survey" | "upload" | "loading" | "dashboard">("login");
-  const [activeTab, setActiveTab] = useState<"dashboard" | "realtime" | "persona" | "graph" | "guide" | "contents" | "settings">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "persona" | "graph" | "guide" | "contents" | "settings">("dashboard");
 
   // Auth states
   const [session, setSession] = useState<any>(null);
@@ -494,7 +503,7 @@ export default function DashboardLayout() {
   const [isReupload, setIsReupload] = useState(false);
 
   // Survey state (Self-Assessment Questionnaire)
-  const [surveyData, setSurveyData] = useState({ div: 50, sta: 50, ini: 50, ope: 50 });
+  const [surveyData, setSurveyData] = useState({ tds: 50, sbs: 50, ebs: 50, vos: 50, sms: 50, uas: 50 });
 
   // File Upload states
   const [dragActive, setDragActive] = useState(false);
@@ -516,6 +525,17 @@ export default function DashboardLayout() {
   const [completedMissions, setCompletedMissions] = useState<Set<number>>(new Set());
   const [activeCourse, setActiveCourse] = useState<3 | 7>(3);
   const [isTitlesExpanded, setIsTitlesExpanded] = useState<boolean>(false);
+  const [activeMetrics, setActiveMetrics] = useState<string[]>(['BRS']);
+
+  const metricMetaData = [
+    { key: 'BRS', label: '종합 위험도', color: '#EF4444' },
+    { key: 'tds', label: '주제 다양성 (TDS)', color: '#3B82F6' },
+    { key: 'sbs', label: '출처 균형 (SBS)', color: '#10B981' },
+    { key: 'ebs', label: '감정 균형 (EBS)', color: '#8B5CF6' },
+    { key: 'vos', label: '관점 개방 (VOS)', color: '#EC4899' },
+    { key: 'sms', label: '유해 안전 (SMS)', color: '#F59E0B' },
+    { key: 'uas', label: '사용자 주도 (UAS)', color: '#06B6D4' },
+  ];
 
   const ALL_TITLES = [
     { minStreak: 0, title: "알고리즘의 노예 ⛓️", desc: "유튜브 추천의 파도에 휩쓸려 다니는 중입니다." },
@@ -547,7 +567,7 @@ export default function DashboardLayout() {
         setGuideData(null);
         setContents(null);
         setFile(null);
-        setSurveyData({ div: 50, sta: 50, ini: 50, ope: 50 });
+        setSurveyData({ tds: 50, sbs: 50, ebs: 50, vos: 50, sms: 50, uas: 50 });
         setCompletedMissions(new Set());
         setUploadProgress(0);
         setProgressPercent(0);
@@ -579,7 +599,7 @@ export default function DashboardLayout() {
         setGuideData(null);
         setContents(null);
         setFile(null);
-        setSurveyData({ div: 50, sta: 50, ini: 50, ope: 50 });
+        setSurveyData({ tds: 50, sbs: 50, ebs: 50, vos: 50, sms: 50, uas: 50 });
         setCompletedMissions(new Set());
         setUploadProgress(0);
         setProgressPercent(0);
@@ -591,6 +611,48 @@ export default function DashboardLayout() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchSurveyData = async (token: string) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/survey`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSurveyData({
+          tds: Number(data?.tds ?? 50),
+          sbs: Number(data?.sbs ?? 50),
+          ebs: Number(data?.ebs ?? 50),
+          vos: Number(data?.vos ?? 50),
+          sms: Number(data?.sms ?? 50),
+          uas: Number(data?.uas ?? 50)
+        });
+      }
+    } catch (e) {
+      console.error("Failed to load survey data:", e);
+    }
+  };
+
+  const handleSurveySubmit = async () => {
+    if (!session) {
+      setStep("upload");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/survey`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(surveyData)
+      });
+      if (!res.ok) console.error("Failed to save survey data to server");
+    } catch (e) {
+      console.error("Error saving survey data:", e);
+    }
+    setStep("upload");
+  };
 
   const checkPreviousReport = async (activeSession: any) => {
     try {
@@ -610,6 +672,8 @@ export default function DashboardLayout() {
       });
       if (res.ok) {
         const data = await res.json();
+        await fetchSurveyData(activeSession.access_token);
+        
         if (data.dataset_id) {
           await fetchDashboardData(data.dataset_id, activeSession.access_token);
           await fetchTabDetails(activeSession.access_token);
@@ -784,11 +848,9 @@ export default function DashboardLayout() {
             alert("🚨 [판정보류] 업로드한 유튜브 시청 기록이 너무 적습니다(최소 10건 이상 필요). 더 풍부한 데이터로 다시 시청 기록을 내려받아 업로드해주세요.");
             setStep("upload");
           } else {
-            // 처리 오류 → 로딩바를 유지하며 재시도 폴링 시작
-            // 업로드 화면으로 돌아가지 않고 계속 대기
-            setPollingStage("scoring");
-            setProgressPercent(80);
-            pollJobStatus(data.dataset_id || id, token);
+            // 서버 내부 오류나 GCP 타임아웃 발생 시 무한 루프를 방지하고 에러 팝업 표시
+            alert("🚨 [분석 오류] 데이터 양이 너무 많아 구글 NLP API 응답이 지연되거나 내부 오류가 발생했습니다. 조금 더 적은 기간의 데이터로 다시 시도해주세요.");
+            setStep("upload");
           }
         }
       } catch (e) {
@@ -911,12 +973,12 @@ export default function DashboardLayout() {
 
   // Helper variables for Recharts mapping
   const mbtiData = [
-    { subject: '주제 다양성(TDS)', A: scores?.tds || scores?.diversity || 0 },
-    { subject: '출처 균형(SBS)', A: scores?.sbs || scores?.diversity || 0 },
-    { subject: '감정 균형(EBS)', A: scores?.ebs || scores?.stability || 0 },
-    { subject: '관점 개방(VOS)', A: scores?.vos || scores?.openness || 0 },
-    { subject: '유해 안전(SMS)', A: scores?.sms || scores?.stability || 0 },
-    { subject: '사용자 주도(UAS)', A: scores?.uas || scores?.proactivity || 0 }
+    { subject: '주제 다양성(TDS)', A: scores?.tds || 0 },
+    { subject: '출처 균형(SBS)', A: scores?.sbs || 0 },
+    { subject: '감정 균형(EBS)', A: scores?.ebs || 0 },
+    { subject: '관점 개방(VOS)', A: scores?.vos || 0 },
+    { subject: '유해 안전(SMS)', A: scores?.sms || 0 },
+    { subject: '사용자 주도(UAS)', A: scores?.uas || 0 }
   ];
 
   const rawInterests = contents?.top_interests;
@@ -952,21 +1014,21 @@ export default function DashboardLayout() {
     if (val < 80) return { color: "#F97316", textColor: "text-orange-500", label: "경고" };
     return { color: "#EF4444", textColor: "text-red-500", label: "위험" };
   };
-  const currentBrs = scores?.brs || scores?.manipulation_index || 72;
+  const currentBrs = scores?.brs || 72;
   const brsInfo = getBrsStyle(currentBrs);
-  const personaType = scores?.persona_type || "PNSF";
+  const personaType = personaData?.type || scores?.persona_type || "UNKN";
   const dsao = getDsaoInfo(personaType);
 
   // Calculated Gap logic (Mirror Therapy)
   const calculateGapWarning = () => {
-    const aiScores = personaData?.ai_scores || { div: 38, sta: 76, ini: 56, ope: 41, tds: 38, sbs: 50, ebs: 76, vos: 41, sms: 76, uas: 56 };
+    const aiScores = personaData?.ai_scores || { tds: 38, sbs: 50, ebs: 76, vos: 41, sms: 76, uas: 56 };
     const gaps = [
-      { name: '주제 다양성(TDS)', diff: surveyData.div - (aiScores.tds || aiScores.div || 38) },
-      { name: '출처 균형(SBS)', diff: surveyData.div - (aiScores.sbs || aiScores.div || 50) },
-      { name: '감정 균형(EBS)', diff: surveyData.sta - (aiScores.ebs || aiScores.sta || 76) },
-      { name: '관점 개방(VOS)', diff: surveyData.ope - (aiScores.vos || aiScores.ope || 41) },
-      { name: '유해 안전(SMS)', diff: surveyData.sta - (aiScores.sms || aiScores.sta || 76) },
-      { name: '사용자 주도(UAS)', diff: surveyData.ini - (aiScores.uas || aiScores.ini || 56) }
+      { name: '주제 다양성(TDS)', diff: surveyData.tds - (aiScores.tds || 38) },
+      { name: '출처 균형(SBS)', diff: surveyData.sbs - (aiScores.sbs || 50) },
+      { name: '감정 균형(EBS)', diff: surveyData.ebs - (aiScores.ebs || 76) },
+      { name: '관점 개방(VOS)', diff: surveyData.vos - (aiScores.vos || 41) },
+      { name: '유해 안전(SMS)', diff: surveyData.sms - (aiScores.sms || 76) },
+      { name: '사용자 주도(UAS)', diff: surveyData.uas - (aiScores.uas || 56) }
     ];
     const maxGap = gaps.reduce((prev, curr) => (curr.diff > prev.diff) ? curr : prev);
     if (maxGap.diff > 20) {
@@ -978,12 +1040,12 @@ export default function DashboardLayout() {
 
   // Recharts Multi-polygon Radar Data
   const comparisonRadarData = [
-    { subject: '주제 다양성', A: surveyData.div, B: personaData?.ai_scores?.tds || personaData?.ai_scores?.div || 38 },
-    { subject: '출처 균형', A: surveyData.div, B: personaData?.ai_scores?.sbs || personaData?.ai_scores?.div || 50 },
-    { subject: '감정 균형', A: surveyData.sta, B: personaData?.ai_scores?.ebs || personaData?.ai_scores?.sta || 76 },
-    { subject: '관점 개방', A: surveyData.ope, B: personaData?.ai_scores?.vos || personaData?.ai_scores?.ope || 41 },
-    { subject: '유해 안전', A: surveyData.sta, B: personaData?.ai_scores?.sms || personaData?.ai_scores?.sta || 76 },
-    { subject: '사용자 주도', A: surveyData.ini, B: personaData?.ai_scores?.uas || personaData?.ai_scores?.ini || 56 }
+    { subject: '주제 다양성 (TDS)', A: Number(surveyData?.tds ?? 50), B: Number(personaData?.ai_scores?.tds ?? 38) },
+    { subject: '출처 균형 (SBS)', A: Number(surveyData?.sbs ?? 50), B: Number(personaData?.ai_scores?.sbs ?? 50) },
+    { subject: '감정 균형 (EBS)', A: Number(surveyData?.ebs ?? 50), B: Number(personaData?.ai_scores?.ebs ?? 76) },
+    { subject: '관점 개방 (VOS)', A: Number(surveyData?.vos ?? 50), B: Number(personaData?.ai_scores?.vos ?? 41) },
+    { subject: personaData?.ai_scores?.sms_reliability === "low" ? '유해 안전 (SMS) ⚠️' : '유해 안전 (SMS)', A: Number(surveyData?.sms ?? 50), B: Number(personaData?.ai_scores?.sms ?? 76), issue: personaData?.ai_scores?.sms_issue },
+    { subject: '사용자 주도 (UAS)', A: Number(surveyData?.uas ?? 50), B: Number(personaData?.ai_scores?.uas ?? 56) }
   ];
 
 
@@ -1217,20 +1279,24 @@ export default function DashboardLayout() {
                       onClick={() => {
                         setDatasetId("demo-dataset");
                         setScores({
-                          diversity: 38.0,
-                          stability: 76.0,
-                          proactivity: 56.0,
-                          openness: 41.0,
-                          manipulation_index: 72.0,
+                          tds: 38.0,
+                          sbs: 50.0,
+                          ebs: 76.0,
+                          vos: 41.0,
+                          sms: 76.0,
+                          uas: 56.0,
+                          brs: 72.0,
                           persona_type: "PNSF"
                         });
                         setReport({
                           overall_summary: "특정 분야에 과도하게 매몰되어 다른 관점을 수용하지 못할 위험(확증편향)이 큽니다.",
                           axis_comments: [
-                            "다양성 점수는 38/100으로 특정 장르에 지나치게 쏠림 현상이 관찰됩니다.",
-                            "안정성 점수는 76/100으로 비교적 안전한 영상을 시청하고 있습니다.",
-                            "주도성 점수는 56/100으로 추천 영상을 주로 소비합니다.",
-                            "개방성 점수는 41/100으로 고정된 취향을 가집니다."
+                            "주제 다양성(TDS) 점수는 38점으로 특정 카테고리 쏠림이 보입니다.",
+                            "출처 균형(SBS) 점수는 50점으로 소수 채널 의존도가 다소 있습니다.",
+                            "감정 균형(EBS) 점수는 76점으로 안정적 시청 패턴을 보여줍니다.",
+                            "관점 개방성(VOS) 점수는 41점으로 익숙한 시각 중심의 시청을 합니다.",
+                            "유해 안전성(SMS) 점수는 76점으로 자극적 요소가 비교적 잘 조절되고 있습니다.",
+                            "사용자 주도성(UAS)은 56점으로 다소 알고리즘 추천 위주의 수동적 시청을 하고 있습니다."
                           ],
                           key_findings: "IT/테크 중심의 편향 시청이 관찰됩니다.",
                           recommendations: "역방향 쿼리를 사용한 적극적 탐색이 필요합니다.",
@@ -1273,7 +1339,7 @@ export default function DashboardLayout() {
                         setPersonaData({
                           type: "PNSF",
                           weakness: "특정 분야에 과도하게 매몰되어 다른 관점을 수용하지 못할 위험(확증편향)이 큽니다.",
-                          ai_scores: { div: 38, sta: 76, ini: 56, ope: 41 },
+                          ai_scores: { tds: 38, sbs: 50, ebs: 76, vos: 41, sms: 76, uas: 56 },
                           history: [ { month: '1월', objectivity: 70 }, { month: '3월', objectivity: 65 }, { month: '5월', objectivity: 56 } ]
                         });
                         setGraphData({
@@ -1359,60 +1425,82 @@ export default function DashboardLayout() {
 
           {/* STEP 2: SURVEY QUESTIONNAIRE */}
           {step === "survey" && (
-            <div className="absolute inset-0 bg-[#F8FAFC] z-50 flex items-center justify-center p-8">
-              <div className="bg-white p-10 rounded-2xl shadow-xl w-full max-w-lg">
+            <div className="absolute inset-0 bg-[#F8FAFC] z-50 flex items-center justify-center p-8 overflow-y-auto">
+              <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg my-8">
                 <h2 className="text-2xl font-bold text-slate-900 mb-2 text-center">메타인지 자가진단 (2/3)</h2>
-                <p className="text-slate-500 mb-8 text-sm text-center">본인이 스스로 생각하는 시청 성향을 평가해주세요 (0~100점).</p>
+                <p className="text-slate-500 mb-6 text-sm text-center">본인이 스스로 생각하는 시청 성향을 평가해주세요 (0~100점).</p>
                 
-                <div className="space-y-6 mb-8">
+                <div className="space-y-4 mb-6">
                   <div>
-                    <div className="flex justify-between text-sm font-bold text-slate-800 mb-2">
-                      <span>주제 다양성 (여러 주제 시청)</span>
-                      <span className="text-indigo-600">{surveyData.div}점</span>
+                    <div className="flex justify-between text-xs font-bold text-slate-800 mb-1">
+                      <span>주제 다양성 (TDS) (여러 관심 분야 시청)</span>
+                      <span className="text-indigo-600">{surveyData.tds}점</span>
                     </div>
                     <input 
-                      type="range" min="0" max="100" value={surveyData.div}
-                      onChange={(e) => setSurveyData({...surveyData, div: parseInt(e.target.value)})}
-                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      type="range" min="0" max="100" value={surveyData.tds}
+                      onChange={(e) => setSurveyData({...surveyData, tds: parseInt(e.target.value)})}
+                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                     />
                   </div>
                   <div>
-                    <div className="flex justify-between text-sm font-bold text-slate-800 mb-2">
-                      <span>유해 회피력 (자극적 영상 자제)</span>
-                      <span className="text-indigo-600">{surveyData.sta}점</span>
+                    <div className="flex justify-between text-xs font-bold text-slate-800 mb-1">
+                      <span>출처 균형 (SBS) (한 채널만 보지 않음)</span>
+                      <span className="text-indigo-600">{surveyData.sbs}점</span>
                     </div>
                     <input 
-                      type="range" min="0" max="100" value={surveyData.sta}
-                      onChange={(e) => setSurveyData({...surveyData, sta: parseInt(e.target.value)})}
-                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      type="range" min="0" max="100" value={surveyData.sbs}
+                      onChange={(e) => setSurveyData({...surveyData, sbs: parseInt(e.target.value)})}
+                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                     />
                   </div>
                   <div>
-                    <div className="flex justify-between text-sm font-bold text-slate-800 mb-2">
-                      <span>탐색 주도성 (직접 검색 시청)</span>
-                      <span className="text-indigo-600">{surveyData.ini}점</span>
+                    <div className="flex justify-between text-xs font-bold text-slate-800 mb-1">
+                      <span>감정 균형 (EBS) (안정적인 콘텐츠)</span>
+                      <span className="text-indigo-600">{surveyData.ebs}점</span>
                     </div>
                     <input 
-                      type="range" min="0" max="100" value={surveyData.ini}
-                      onChange={(e) => setSurveyData({...surveyData, ini: parseInt(e.target.value)})}
-                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      type="range" min="0" max="100" value={surveyData.ebs}
+                      onChange={(e) => setSurveyData({...surveyData, ebs: parseInt(e.target.value)})}
+                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                     />
                   </div>
                   <div>
-                    <div className="flex justify-between text-sm font-bold text-slate-800 mb-2">
-                      <span>관점 개방성 (다양한 의견 수용)</span>
-                      <span className="text-indigo-600">{surveyData.ope}점</span>
+                    <div className="flex justify-between text-xs font-bold text-slate-800 mb-1">
+                      <span>관점 개방 (VOS) (다양한 의견 수용)</span>
+                      <span className="text-indigo-600">{surveyData.vos}점</span>
                     </div>
                     <input 
-                      type="range" min="0" max="100" value={surveyData.ope}
-                      onChange={(e) => setSurveyData({...surveyData, ope: parseInt(e.target.value)})}
-                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      type="range" min="0" max="100" value={surveyData.vos}
+                      onChange={(e) => setSurveyData({...surveyData, vos: parseInt(e.target.value)})}
+                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-xs font-bold text-slate-800 mb-1">
+                      <span>유해 안전 (SMS) (자극적이지 않은)</span>
+                      <span className="text-indigo-600">{surveyData.sms}점</span>
+                    </div>
+                    <input 
+                      type="range" min="0" max="100" value={surveyData.sms}
+                      onChange={(e) => setSurveyData({...surveyData, sms: parseInt(e.target.value)})}
+                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-xs font-bold text-slate-800 mb-1">
+                      <span>탐색 주도성 (UAS) (알고리즘 비의존)</span>
+                      <span className="text-indigo-600">{surveyData.uas}점</span>
+                    </div>
+                    <input 
+                      type="range" min="0" max="100" value={surveyData.uas}
+                      onChange={(e) => setSurveyData({...surveyData, uas: parseInt(e.target.value)})}
+                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                     />
                   </div>
                 </div>
 
                 <button 
-                  onClick={() => setStep("upload")}
+                  onClick={handleSurveySubmit}
                   className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition-colors"
                 >
                   다음으로 (파일 업로드)
@@ -1663,7 +1751,7 @@ export default function DashboardLayout() {
                         </div>
                       )}
                     </div>
-                    {contents?.uncategorized && (
+                    {contents?.uncategorized && contents.uncategorized.percentage > 0 && (
                       <div className="mt-4 pt-3 border-t border-slate-100 space-y-1">
                         <div className="flex items-center justify-between text-xs text-slate-500">
                           <span className="flex items-center gap-1 font-medium">
@@ -1707,38 +1795,107 @@ export default function DashboardLayout() {
                         과거부터 현재까지의 '편향 위험도(BRS)' 추이입니다. 숫자가 높을수록 알고리즘에 갇혀 한쪽으로 치우친 시청을 하고 있다는 의미입니다.
                       </p>
                     </div>
-                    <div className="w-full h-56 xl:h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={timelineData}>
-                          <defs>
-                            <linearGradient id="colorScore" x1="0" y1="0" x2="1" y2="0">
-                              <stop offset="5%" stopColor="#EF4444" stopOpacity={0.4}/>
-                              <stop offset="50%" stopColor="#F59E0B" stopOpacity={0.4}/>
-                              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.4}/>
-                            </linearGradient>
-                          </defs>
-                          <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} />
-                          <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} domain={[0, 100]} />
-                          <Tooltip 
-                            content={({ active, payload, label }: any) => {
-                              if (active && payload && payload.length) {
-                                return (
-                                  <div className="bg-slate-800 text-white text-xs rounded-xl p-3 shadow-xl">
-                                    <p className="font-bold mb-1 text-slate-400">{label}</p>
-                                    <p className="font-bold text-indigo-300 mb-2">편향 위험도(BRS): <span className="text-white text-sm">{payload[0].value}</span></p>
-                                    <div className="bg-slate-900/50 rounded p-2 border border-slate-700">
-                                      <span className="text-slate-400 block mb-0.5 text-[10px]">주요 시청 관심사</span>
-                                      <span className="text-white font-semibold">🎬 {payload[0].payload.top_keyword}</span>
-                                    </div>
-                                  </div>
-                                );
+                    {/* 6-axis metric filter toggle buttons */}
+                    <div className="flex flex-wrap gap-2 mb-6 px-1">
+                      {metricMetaData.map((m) => {
+                        const isActive = activeMetrics.includes(m.key);
+                        return (
+                          <button
+                            key={m.key}
+                            onClick={() => {
+                              if (isActive) {
+                                if (activeMetrics.length > 1) {
+                                  setActiveMetrics(activeMetrics.filter(x => x !== m.key));
+                                }
+                              } else {
+                                setActiveMetrics([...activeMetrics, m.key]);
                               }
-                              return null;
                             }}
-                          />
-                          <Area type="monotone" dataKey="편향위험도" stroke="#475569" fillOpacity={1} fill="url(#colorScore)" />
-                        </AreaChart>
-                      </ResponsiveContainer>
+                            className={`text-xs px-3 py-1.5 rounded-full font-bold transition-all border ${
+                              isActive 
+                                ? 'bg-slate-900 text-white border-slate-900 shadow-sm' 
+                                : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                            }`}
+                            style={isActive ? { borderLeft: `3px solid ${m.color}` } : {}}
+                          >
+                            {m.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="w-full h-56 xl:h-64">
+                      {timelineData.length < 2 ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 text-center p-6">
+                          <span className="text-3xl mb-2">📈</span>
+                          <p className="text-xs font-bold text-slate-500 leading-relaxed">
+                            추이 그래프는 분석 이력이 2회 이상 누적될 때 활성화됩니다.
+                          </p>
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            유튜브 시청 기록 데이터를 한 번 더 업로드하시면 알고리즘 디톡스 변화 추이를 정밀히 분석해 드립니다!
+                          </p>
+                        </div>
+                      ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={timelineData}>
+                            <defs>
+                              <linearGradient id="colorScore" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="5%" stopColor="#EF4444" stopOpacity={0.4}/>
+                                <stop offset="50%" stopColor="#F59E0B" stopOpacity={0.4}/>
+                                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.4}/>
+                              </linearGradient>
+                            </defs>
+                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} />
+                            <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} domain={[0, 100]} />
+                            <Tooltip 
+                              content={({ active, payload, label }: any) => {
+                                if (active && payload && payload.length) {
+                                  return (
+                                    <div className="bg-slate-800 text-white text-xs rounded-xl p-3 shadow-xl min-w-[200px]">
+                                      <p className="font-bold mb-2 text-slate-400">{label} 편향 분석</p>
+                                      <div className="space-y-1.5 mb-2.5 max-h-48 overflow-y-auto">
+                                        {payload.map((item: any) => (
+                                          <div key={item.dataKey} className="flex justify-between items-center gap-4">
+                                            <span className="flex items-center gap-1.5 font-semibold text-slate-300">
+                                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color || item.stroke }} />
+                                              {item.name}:
+                                            </span>
+                                            <span className="font-bold text-sm" style={{ color: item.color || item.stroke || '#FFF' }}>
+                                              {item.value}점
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                      <div className="bg-slate-900/50 rounded p-2 border border-slate-700">
+                                        <span className="text-slate-400 block mb-0.5 text-[10px]">주요 시청 관심사</span>
+                                        <span className="text-white font-semibold">🎬 {payload[0].payload.top_keyword || '기타'}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            {activeMetrics.includes('BRS') && (
+                              <Area type="monotone" dataKey="편향위험도" name="종합 위험도" stroke="#475569" fillOpacity={1} fill="url(#colorScore)" />
+                            )}
+                            {metricMetaData.filter(m => m.key !== 'BRS').map((m) => {
+                              if (!activeMetrics.includes(m.key)) return null;
+                              return (
+                                <Line
+                                  key={m.key}
+                                  type="monotone"
+                                  dataKey={m.key}
+                                  name={m.label.split(' ')[0]}
+                                  stroke={m.color}
+                                  strokeWidth={2}
+                                  dot={{ r: 3 }}
+                                  activeDot={{ r: 5 }}
+                                />
+                              );
+                            })}
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      )}
                     </div>
                   </div>
 
@@ -1834,15 +1991,30 @@ export default function DashboardLayout() {
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 xl:gap-6">
                   <div className="flex flex-col gap-4 xl:gap-6">
                     <div className="bg-white rounded-2xl shadow-sm p-5">
-                      <h3 className="font-bold text-slate-900 mb-6">자가진단 vs AI 실제 분석 대조</h3>
-                      <div className="w-full h-96">
+                      <h3 className="font-bold text-slate-900 mb-2">자가진단 vs AI 실제 분석 대조</h3>
+                      
+                      {/* 커스텀 설명 범례 박스 */}
+                      <div className="flex items-center justify-center gap-6 mb-4 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100 text-xs font-bold">
+                        <div className="flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full bg-[#F59E0B] border border-[#D97706] opacity-80" />
+                          <span className="text-slate-700">자가진단 수치 (주황색 영역)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full bg-[#4F46E5] border border-[#4338CA] opacity-80" />
+                          <span className="text-slate-700">AI 실제 시청 분석 (보라색 영역)</span>
+                        </div>
+                      </div>
+
+                      <div className="w-full h-80">
                         <ResponsiveContainer width="100%" height="100%">
                           <RadarChart cx="50%" cy="50%" outerRadius="80%" data={comparisonRadarData}>
                             <PolarGrid />
                             <PolarAngleAxis dataKey="subject" />
+                            <PolarRadiusAxis angle={30} domain={[0, 100]} />
                             <Radar name="자가진단" dataKey="A" stroke="#F59E0B" fill="rgba(245, 158, 11, 0.3)" />
                             <Radar name="AI 분석" dataKey="B" stroke="#4F46E5" fill="rgba(79, 70, 229, 0.3)" />
                             <Tooltip />
+                            <Legend />
                           </RadarChart>
                         </ResponsiveContainer>
                       </div>
@@ -1857,7 +2029,7 @@ export default function DashboardLayout() {
                       </div>
                       <div className="grid grid-cols-2 gap-3 mt-2">
                         {comparisonRadarData.map((data, idx) => (
-                          <div key={idx} className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                          <div key={idx} title={data.issue || ""} className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
                             <span className="text-[11px] font-semibold text-slate-600">{data.subject}</span>
                             <span className="text-sm font-bold text-indigo-600">{Math.round(data.B)}점</span>
                           </div>
@@ -1922,6 +2094,17 @@ export default function DashboardLayout() {
                           </div>
                         )}
                       </div>
+
+                      {personaData && (personaData.data_quality === "low" || personaData.data_quality === "medium") && (
+                        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-2.5 mb-4 text-xs font-semibold leading-relaxed flex items-center gap-2">
+                          <span className="shrink-0 text-sm">⚠️</span>
+                          <span>
+                            분석된 시청 데이터 개수가 부족하여 성향 분석의 신뢰도가 다소 낮습니다. 
+                            안정적인 분석을 위해 200건 이상의 시청 기록 업로드를 권장합니다.
+                          </span>
+                        </div>
+                      )}
+
                       <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 mb-4 flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center text-2xl shadow-sm">

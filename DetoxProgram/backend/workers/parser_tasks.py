@@ -56,4 +56,7 @@ def process_watch_history_task(self, dataset_id: str, file_content: bytes, filen
         traceback.print_exc()
         update_job_status(dataset_id, "failed", "error")
         # Retry logic for transient failures could go here
-        raise self.retry(exc=exc, countdown=10)
+        if self is not None and hasattr(self, 'retry'):
+            raise self.retry(exc=exc, countdown=10)
+        else:
+            print("Background task failed without Celery retry context.")

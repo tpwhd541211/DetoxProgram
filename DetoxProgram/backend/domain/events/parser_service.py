@@ -77,6 +77,11 @@ def extract_raw_data_json(file_content: bytes):
     구글 테이크아웃의 시청 기록(JSON)에서 데이터를 추출합니다.
     """
     data = json.loads(file_content)
+    
+    # 테이크아웃 데이터는 최신순 정렬이므로 루프 전에 미리 잘라내어 파싱 부하 최적화
+    if len(data) > 10000:
+        data = data[:10000]
+        
     events = []
     
     for item in data:
@@ -109,9 +114,10 @@ def extract_raw_data_json(file_content: bytes):
                 clean_title = title.split(" 을(를) 시청했습니다.")[0].strip()
                 
             if clean_title.startswith("http://") or clean_title.startswith("https://") or "youtube.com" in clean_title or "watch?v=" in clean_title:
-                clean_title = ""
-                
-            if clean_title.startswith("#shorts") or clean_title.lower().startswith("#shorts"):
+                if video_id:
+                    clean_title = f"video_{video_id}" # use video ID as title to track rewatch
+
+            if clean_title.startswith("#shorts") or clean_title.lower().startswith("#shorts") or is_short:
                 is_short = True
                 
         elif is_search:
@@ -155,6 +161,10 @@ def extract_raw_data_html(file_content: bytes):
     # 'content-cell' 클래스가 포함된 모든 div 탐색
     cells = soup.find_all("div", class_=lambda c: c and "content-cell" in c)
     
+    # 테이크아웃 데이터는 최신순 정렬이므로 루프 전에 미리 잘라내어 파싱 부하 최적화
+    if len(cells) > 10000:
+        cells = cells[:10000]
+        
     for cell in cells:
         text_content = cell.get_text(separator=" ", strip=True)
         links = cell.find_all("a")
@@ -170,22 +180,13 @@ def extract_raw_data_html(file_content: bytes):
         is_watch = (text_content.startswith("Watched ") or "을(를) 시청했습니다." in text_content) and len(links) >= 1
         is_search = (text_content.startswith("Searched for ") or "을(를) 검색했습니다." in text_content) and len(links) >= 1
         
-        if is_watch:
-            event_type = "watch"
-            title_node = links[0]
-            title = title_node.text.strip()
-            if title.startswith("http://") or title.startswith("https://") or "youtube.com" in title or "watch?v=" in title:
-                title = ""
         is_short = False
-        is_watch = (text_content.startswith("Watched ") or "을(를) 시청했습니다." in text_content) and len(links) >= 1
-        is_search = (text_content.startswith("Searched for ") or "을(를) 검색했습니다." in text_content) and len(links) >= 1
-        
+
         if is_watch:
             event_type = "watch"
             title_node = links[0]
             title = title_node.text.strip()
-            if title.startswith("http://") or title.startswith("https://") or "youtube.com" in title or "watch?v=" in title:
-                title = ""
+            
             video_url = title_node.get("href", "")
             if "watch?v=" in video_url:
                 parsed_url = urllib.parse.urlparse(video_url)
@@ -195,8 +196,11 @@ def extract_raw_data_html(file_content: bytes):
                 parts = video_url.split("/shorts/")
                 if len(parts) > 1:
                     video_id = parts[1].split("?")[0].split("&")[0].strip()
-            
-            if title.startswith("#shorts") or title.lower().startswith("#shorts"):
+
+            if title.startswith("http://") or title.startswith("https://") or "youtube.com" in title or "watch?v=" in title:
+                title = f"video_{video_id}" if video_id else title # Keep something to track rewatch
+
+            if title.startswith("#shorts") or title.lower().startswith("#shorts") or "shorts" in title.lower():
                 is_short = True
             
             if len(links) >= 2:

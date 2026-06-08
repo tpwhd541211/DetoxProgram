@@ -50,12 +50,6 @@ class ScoreRun(Base):
     __tablename__ = "score_run"
     id = Column(Integer, primary_key=True, index=True)
     dataset_id = Column(String, unique=True, index=True)
-    # Original 4-axis values for backward compatibility
-    diversity = Column(Float)
-    stability = Column(Float)
-    proactivity = Column(Float)
-    openness = Column(Float)
-    manipulation_index = Column(Float)
     
     # 6-axis detailed values from UDF specification
     tds = Column(Float, default=0.0) # 주제 다양성 점수
@@ -78,30 +72,12 @@ class ReportSnapshot(Base):
     user_id = Column(String, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-# 추가된 UDF DBMS 설계 테이블들
-class Profiles(Base):
-    __tablename__ = "profiles"
-    id = Column(String, primary_key=True, index=True)
-    email = Column(String)
-    display_name = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
 class ConsentLog(Base):
     __tablename__ = "consent_log"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String, index=True)
     consent_version = Column(String)
     agreed_at = Column(DateTime, default=datetime.utcnow)
-
-class RawFile(Base):
-    __tablename__ = "raw_file"
-    dataset_id = Column(String, primary_key=True, index=True)
-    file_name = Column(String)
-    platform = Column(String)
-    hash = Column(String)
-    storage_path = Column(String)
-    user_id = Column(String, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
 
 class AuditLog(Base):
     __tablename__ = "audit_log"
@@ -134,3 +110,15 @@ class UserStreak(Base):
     user_id = Column(String, primary_key=True, index=True)
     current_streak = Column(Integer, default=0)
     last_completed_date = Column(DateTime)
+
+class SurveyResponse(Base):
+    __tablename__ = "survey_response"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String, index=True)
+    tds = Column(Integer, default=50)
+    sbs = Column(Integer, default=50)
+    ebs = Column(Integer, default=50)
+    vos = Column(Integer, default=50)
+    sms = Column(Integer, default=50)
+    uas = Column(Integer, default=50)
+    created_at = Column(DateTime, default=datetime.utcnow)

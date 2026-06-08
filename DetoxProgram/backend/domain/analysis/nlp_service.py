@@ -508,18 +508,26 @@ def analyze_session_text_advanced(session):
     
     res = classify_session_advanced(events, session_text)
     
+    # Always calculate fallback factors using local Korean keyword dictionary
+    fallback_stability, fallback_safety = analyze_sentiment_and_stimulus_fallback(session_text)
+    
     gcp_res = analyze_text_with_gcp(session_text)
     if gcp_res:
         score = gcp_res["documentSentiment"]["score"]
-        stability_factor = max(0.1, 1.0 - max(0.0, -score) * 0.8)
+        gcp_stability = max(0.1, 1.0 - max(0.0, -score) * 0.8)
         max_mod_confidence = 0.0
         bad_categories = ["Toxic", "Insult", "Profanity", "Violence", "Hate Speech", "Harassment", "Derogatory", "Sexual"]
         for cat in gcp_res["moderationCategories"]:
             if cat["name"] in bad_categories:
                 max_mod_confidence = max(max_mod_confidence, cat["confidence"])
-        safety_factor = max(0.1, 1.0 - max_mod_confidence * 1.2)
+        gcp_safety = max(0.1, 1.0 - max_mod_confidence * 1.8)
+        
+        # Hybrid model: Take the minimum of GCP NLP and Korean keyword results
+        stability_factor = min(gcp_stability, fallback_stability)
+        safety_factor = min(gcp_safety, fallback_safety)
     else:
-        stability_factor, safety_factor = analyze_sentiment_and_stimulus_fallback(session_text)
+        stability_factor = fallback_stability
+        safety_factor = fallback_safety
         
     keywords = []
     if gcp_res:

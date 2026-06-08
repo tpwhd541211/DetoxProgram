@@ -2,8 +2,9 @@ from core.database import engine, Base
 # 이 임포트가 있어야 Base가 자식 테이블(스키마)을 인식합니다.
 from models.schemas import (
     RawEvent, NormEvent, NLPResult, ScoreRun, ReportSnapshot,
-    Profiles, ConsentLog, RawFile, 
-    AuditLog, AnalysisJob, MissionLog, UserStreak, UserSession
+    ConsentLog, 
+    AuditLog, AnalysisJob, MissionLog, UserStreak, UserSession,
+    SurveyResponse
 )
 
 def init_db():

@@ -20,13 +20,13 @@ class ReportSchema(BaseModel):
     missions: List[MissionItem]
 
 def generate_fallback_report(scores):
-    tds = scores.get("tds", 50.0)
-    sbs = scores.get("sbs", 50.0)
-    ebs = scores.get("ebs", 50.0)
-    vos = scores.get("vos", 50.0)
-    sms = scores.get("sms", 50.0)
-    uas = scores.get("uas", 50.0)
-    brs = scores.get("brs", 50.0)
+    tds = scores.get("tds")
+    sbs = scores.get("sbs")
+    ebs = scores.get("ebs")
+    vos = scores.get("vos")
+    sms = scores.get("sms")
+    uas = scores.get("uas")
+    brs = scores.get("brs")
     persona = scores.get("persona_type", "DNSF")
     
     overall_summary = f"당신의 알고리즘 편향 위험도(BRS)는 {brs}%로, {persona} 유형에 속합니다. 특정 주제 및 채널에 고착된 시청 습관의 개선이 필요합니다."
@@ -53,6 +53,7 @@ def generate_fallback_report(scores):
         ("sms", sms, "숏폼 탈출", "말초적인 도파민을 끊어내기 위해 유튜브 쇼츠 대신 10분 이상의 긴 영상 시청", "10분 이상 롱폼 영상 시청 완료", "집중력을 올리는 10가지 방법"),
         ("uas", uas, "주도성 회복", "알고리즘 추천 피드에 의존하지 않고, 직접 관심 있는 분야를 검색해 시청", "추천 피드 대신 직접 검색 시청 완료", "내가 진짜 알고싶은 취미")
     ]
+    dimensions = [item for item in dimensions if item[1] is not None]
     sorted_dims = sorted(dimensions, key=lambda x: x[1])
     weak_dims = sorted_dims[:3]
     
@@ -71,7 +72,12 @@ def generate_fallback_report(scores):
         "key_findings": key_findings,
         "recommendations": recommendations,
         "caution_notes": caution_notes,
-        "missions": missions
+        "missions": missions,
+        "brs_factors": scores.get("brs_factors", []),
+        "brs_base": scores.get("brs_base"),
+        "brs_penalty": scores.get("brs_penalty"),
+        "analysis_status": scores.get("analysis_status"),
+        "data_quality": scores.get("data_quality")
     }
 
 def generate_report_and_missions(scores, nlp_data_summary=""):
@@ -95,6 +101,7 @@ def generate_report_and_missions(scores, nlp_data_summary=""):
             ("유해/자극 안전(SMS)", scores.get("sms", 50.0)),
             ("사용자 주도성(UAS)", scores.get("uas", 50.0))
         ]
+        dimensions = [item for item in dimensions if item[1] is not None]
         sorted_dims = sorted(dimensions, key=lambda x: x[1])
         weak_names = [d[0] for d in sorted_dims[:3]]
         
@@ -217,4 +224,3 @@ def classify_topics_batch(topics: List[str]) -> dict:
                 _keyword_classification_cache[t] = "❓ 기타/미분류"
                 
     return {t: _keyword_classification_cache.get(t, "❓ 기타/미분류") for t in topics}
-

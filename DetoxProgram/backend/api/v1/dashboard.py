@@ -18,7 +18,6 @@ async def get_realtime_data(current_user: str = Depends(get_current_user)):
     try:
         dataset_id = get_latest_dataset_id_for_user(db, current_user)
         if not dataset_id:
-            # Fallback mock if no upload has happened yet for this user
             return {
                 "time_distribution": [ {"hour": f"{h:02d}:00", "total": 0, "dopamine": 0} for h in range(24) ],
                 "peak_message": "데이터가 부족하여 취약 시간대를 분석할 수 없습니다.",
@@ -37,7 +36,6 @@ async def get_realtime_data(current_user: str = Depends(get_current_user)):
             hours_data[hour]["total"] += 1
             
             title_lower = (ev.title or "").lower()
-            ch_lower = (ev.channel_name or "").lower()
             is_high = ev.is_short or any(w in title_lower for w in ["shorts", "쇼츠", "먹방", "자극", "롤", "게임", "폭로", "사건", "사고", "레전드", "소름", "경악", "막장", "논란"])
             if is_high:
                 hours_data[hour]["dopamine"] += 1
@@ -118,43 +116,38 @@ async def get_realtime_data(current_user: str = Depends(get_current_user)):
                 "message": f"무려 {dur_str} 동안 '{s['main_keyword']}' 위주로 연속 시청했습니다."
             })
             
-        # 3. 타임라인 데이터 (최근 7일 일일 BRS 근사치)
-        from collections import Counter
+        # 3. 타임라인 데이터 (유저의 전체 ScoreRun 분석 회차별 이력 연동)
+        all_runs = db.query(ScoreRun).filter(ScoreRun.user_id == current_user).order_by(ScoreRun.created_at.asc()).all()
+        
         timeline_data = []
-        if events:
-            date_groups = {}
-            for ev in events:
-                if ev.watch_time:
-                    d = ev.watch_time.date()
-                    if d not in date_groups:
-                        date_groups[d] = []
-                    date_groups[d].append(ev)
+        for i, run in enumerate(all_runs):
+            run_date = run.created_at.strftime("%m/%d") if run.created_at else ""
+            label = f"{i+1}회차 ({run_date})"
             
-            sorted_dates = sorted(date_groups.keys())
-            for d in sorted_dates[-7:]:
-                day_evs = date_groups[d]
-                total = len(day_evs)
+            # Get the top channel name for this analysis dataset
+            ch_query = db.query(NormEvent.channel_name).filter(
+                NormEvent.dataset_id == run.dataset_id,
+                NormEvent.channel_name != None,
+                NormEvent.channel_name != "",
+                NormEvent.channel_name != "알 수 없는 채널"
+            ).limit(100).all()
+            if ch_query:
+                from collections import Counter
+                top_ch = Counter([r[0] for r in ch_query]).most_common(1)[0][0]
+            else:
+                top_ch = "기타"
                 
-                channels = [e.channel_name for e in day_evs if e.channel_name and e.channel_name != "알 수 없는 채널"]
-                ch_counts = Counter(channels)
-                top_ch = ch_counts.most_common(1)[0] if ch_counts else ("기타", 0)
-                concentration = top_ch[1] / total if total > 0 else 0
-                
-                dopa = 0
-                for e in day_evs:
-                    title_lower = (e.title or "").lower()
-                    is_high = e.is_short or any(w in title_lower for w in ["shorts", "쇼츠", "먹방", "자극", "롤", "게임", "폭로", "사건", "사고", "레전드", "소름", "경악", "막장", "논란"])
-                    if is_high:
-                        dopa += 1
-                
-                dopa_ratio = dopa / total if total > 0 else 0
-                day_brs = int(50 + 25 * concentration + 25 * dopa_ratio)
-                
-                timeline_data.append({
-                    "date": d.strftime("%m/%d"),
-                    "편향위험도": day_brs,
-                    "top_keyword": top_ch[0]
-                })
+            timeline_data.append({
+                "date": label,
+                "편향위험도": int(run.brs) if run.brs is not None else 0,
+                "top_keyword": top_ch,
+                "tds": int(run.tds) if run.tds is not None else 0,
+                "sbs": int(run.sbs) if run.sbs is not None else 0,
+                "ebs": int(run.ebs) if run.ebs is not None else 0,
+                "vos": int(run.vos) if run.vos is not None else 0,
+                "sms": int(run.sms) if run.sms is not None else 0,
+                "uas": int(run.uas) if run.uas is not None else 0
+            })
             
         return {
             "time_distribution": time_distribution,
@@ -164,6 +157,14 @@ async def get_realtime_data(current_user: str = Depends(get_current_user)):
         }
     finally:
         db.close()
+
+def to_int_or_none(val):
+    if val is None:
+        return None
+    try:
+        return int(val)
+    except Exception:
+        return None
 
 @router.get("/persona")
 async def get_persona_data(current_user: str = Depends(get_current_user)):
@@ -175,7 +176,6 @@ async def get_persona_data(current_user: str = Depends(get_current_user)):
                 "type": "UNKN",
                 "weakness": "데이터 업로드 후 분석이 완료되면 맞춤 페르소나와 분석 리포트가 이곳에 표시됩니다.",
                 "ai_scores": {
-                    "div": 0, "sta": 0, "ini": 0, "ope": 0,
                     "tds": 0, "sbs": 0, "ebs": 0, "vos": 0, "sms": 0, "uas": 0, "brs": 0
                 },
                 "history": [],
@@ -194,7 +194,9 @@ async def get_persona_data(current_user: str = Depends(get_current_user)):
         history = []
         for i, run in enumerate(all_runs[-5:]):
             month_str = f"분석 {i+1}회차"
-            objectivity = int((run.diversity + run.openness) / 2)
+            tds = run.tds
+            vos = run.vos
+            objectivity = int((tds + vos) / 2) if tds is not None and vos is not None else None
             history.append({"month": month_str, "objectivity": objectivity})
             
         # Generate comparative statements
@@ -202,13 +204,28 @@ async def get_persona_data(current_user: str = Depends(get_current_user)):
         if len(all_runs) >= 2:
             prev_run = all_runs[-2]
             
-            tds_diff = latest_run.diversity - prev_run.diversity
-            sbs_diff = (latest_run.sbs or latest_run.diversity) - (prev_run.sbs or prev_run.diversity)
-            ebs_diff = (latest_run.ebs or latest_run.stability) - (prev_run.ebs or prev_run.stability)
-            vos_diff = (latest_run.vos or latest_run.openness) - (prev_run.vos or prev_run.openness)
-            sms_diff = (latest_run.sms or latest_run.stability) - (prev_run.sms or prev_run.stability)
-            uas_diff = (latest_run.uas or latest_run.proactivity) - (prev_run.uas or prev_run.proactivity)
-            brs_diff = (latest_run.brs or latest_run.manipulation_index) - (prev_run.brs or prev_run.manipulation_index)
+            latest_tds = latest_run.tds
+            prev_tds = prev_run.tds
+            latest_sbs = latest_run.sbs
+            prev_sbs = prev_run.sbs
+            latest_ebs = latest_run.ebs
+            prev_ebs = prev_run.ebs
+            latest_vos = latest_run.vos
+            prev_vos = prev_run.vos
+            latest_sms = latest_run.sms
+            prev_sms = prev_run.sms
+            latest_uas = latest_run.uas
+            prev_uas = prev_run.uas
+            latest_brs = latest_run.brs
+            prev_brs = prev_run.brs
+            
+            tds_diff = latest_tds - prev_tds if latest_tds is not None and prev_tds is not None else 0
+            sbs_diff = latest_sbs - prev_sbs if latest_sbs is not None and prev_sbs is not None else 0
+            ebs_diff = latest_ebs - prev_ebs if latest_ebs is not None and prev_ebs is not None else 0
+            vos_diff = latest_vos - prev_vos if latest_vos is not None and prev_vos is not None else 0
+            sms_diff = latest_sms - prev_sms if latest_sms is not None and prev_sms is not None else 0
+            uas_diff = latest_uas - prev_uas if latest_uas is not None and prev_uas is not None else 0
+            brs_diff = latest_brs - prev_brs if latest_brs is not None and prev_brs is not None else 0
             
             if tds_diff > 3:
                 comparison_statements.append(f"📚 관심 주제 다양성(TDS)이 {tds_diff:+.1f}점 상승하여, 보다 넓은 범위의 관심사로 확장되었습니다.")
@@ -250,7 +267,6 @@ async def get_persona_data(current_user: str = Depends(get_current_user)):
         else:
             comparison_statements.append("첫 회차 분석 상태입니다. 다음 시청 데이터를 추가 업로드하시면 이전 대비 변화된 추이를 정밀 분석해 드립니다!")
             
-        # Count parsed successful events for confidence metric
         num_events = db.query(NormEvent).filter(NormEvent.dataset_id == latest_run.dataset_id, NormEvent.parse_status == "success").count()
         confidence = round(min(1.0, num_events / 200.0), 2)
         data_quality = "high" if num_events >= 200 else ("medium" if num_events >= 50 else "low")
@@ -262,18 +278,15 @@ async def get_persona_data(current_user: str = Depends(get_current_user)):
             "confidence": confidence,
             "data_quality": data_quality,
             "ai_scores": {
-                "div": int(latest_run.diversity or 0),
-                "sta": int(latest_run.stability or 0),
-                "ini": int(latest_run.proactivity or 0),
-                "ope": int(latest_run.openness or 0),
-                "tds": int(latest_run.tds or latest_run.diversity or 0),
-                "sbs": int(latest_run.sbs or latest_run.diversity or 0),
-                "ebs": int(latest_run.ebs or latest_run.stability or 0),
-                "vos": int(latest_run.vos or latest_run.openness or 0),
-                "sms": int(latest_run.sms or latest_run.stability or 0),
-                "uas": int(latest_run.uas or latest_run.proactivity or 0),
-                "brs": int(latest_run.brs or latest_run.manipulation_index or 0)
+                "tds": to_int_or_none(latest_run.tds),
+                "sbs": to_int_or_none(latest_run.sbs),
+                "ebs": to_int_or_none(latest_run.ebs),
+                "vos": to_int_or_none(latest_run.vos),
+                "sms": to_int_or_none(latest_run.sms),
+                "uas": to_int_or_none(latest_run.uas),
+                "brs": to_int_or_none(latest_run.brs)
             },
+            "brs_factors": report.report_data.get("brs_factors", []) if report and isinstance(report.report_data, dict) else [],
             "history": history,
             "comparison_statements": comparison_statements
         }
@@ -296,7 +309,6 @@ async def get_graph_data(current_user: str = Depends(get_current_user)):
         sessions = db.query(UserSession).filter(UserSession.dataset_id == dataset_id).all()
         nlp_results = db.query(NLPResult).filter(NLPResult.dataset_id == dataset_id).all()
         
-        # Map session_id to tags
         session_tags_map = {}
         for nr in nlp_results:
             tags = nr.analysis_data.get("youtube_tags", []) if isinstance(nr.analysis_data, dict) else []
@@ -317,8 +329,6 @@ async def get_graph_data(current_user: str = Depends(get_current_user)):
             if ch not in channel_topics:
                 channel_topics[ch] = []
                 
-            # Find the session for this event to get its tags
-            # Since sessions are not perfectly aligned if overlapping, checking by time is an approximation
             for s in sessions:
                 if s.session_start and s.session_end and ev.watch_time:
                     if s.session_start <= ev.watch_time <= s.session_end:
@@ -326,19 +336,15 @@ async def get_graph_data(current_user: str = Depends(get_current_user)):
                         channel_topics[ch].extend(tags)
                         break
                         
-        # Get top 10 channels
         top_channels = [ch for ch, count in channel_counts.most_common(10)]
         
         nodes = []
         edges = []
         node_id = 1
-        
         channel_node_ids = {}
         
-        # Add Channel Nodes
         max_ch_count = max(channel_counts.values()) if channel_counts else 1
         for ch in top_channels:
-            # Count shorts vs long-form watched for this channel
             ch_events = [ev for ev in norm_events if ev.channel_name == ch]
             shorts_count = 0
             long_count = 0
@@ -353,22 +359,15 @@ async def get_graph_data(current_user: str = Depends(get_current_user)):
             total_ch = shorts_count + long_count
             if total_ch > 0:
                 ratio = shorts_count / total_ch
-                if ratio >= 0.8:
-                    channel_type = "쇼츠형"
-                elif ratio <= 0.2:
-                    channel_type = "롱폼형"
-                elif 0.2 < ratio <= 0.4:
-                    channel_type = "혼합형 (롱폼 선호)"
-                elif 0.4 < ratio <= 0.6:
-                    channel_type = "혼합형"
-                else:  # 0.6 < ratio <= 0.8
-                    channel_type = "혼합형 (쇼츠 선호)"
+                if ratio >= 0.8: channel_type = "쇼츠형"
+                elif ratio <= 0.2: channel_type = "롱폼형"
+                elif 0.2 < ratio <= 0.4: channel_type = "혼합형 (롱폼 선호)"
+                elif 0.4 < ratio <= 0.6: channel_type = "혼합형"
+                else: channel_type = "혼합형 (쇼츠 선호)"
             else:
                 channel_type = "롱폼형"
                 
-            # Truncate channel name to 12 chars
             ch_display = ch[:12] + "..." if len(ch) > 12 else ch
-            
             size = int(16 + (channel_counts[ch] / max_ch_count) * 12)
             nodes.append({
                 "id": node_id,
@@ -379,15 +378,12 @@ async def get_graph_data(current_user: str = Depends(get_current_user)):
             channel_node_ids[ch] = node_id
             node_id += 1
             
-        # Add Topic Nodes & Edges
-        # Pre-calculate topic classifications to avoid redundant processing
         all_graph_topics = set()
         for ch in top_channels:
             topic_counter = Counter(channel_topics[ch])
             top_topics_for_ch = [t for t, c in topic_counter.most_common(3)]
             all_graph_topics.update(top_topics_for_ch)
-
-        # Build keyword-to-category associations from actual watch event metadata (Event category propagation)
+ 
         keyword_categories = {}
         for nr in nlp_results:
             category = nr.analysis_data.get("category", "❓ 기타/미분류") if isinstance(nr.analysis_data, dict) else "❓ 기타/미분류"
@@ -403,18 +399,15 @@ async def get_graph_data(current_user: str = Depends(get_current_user)):
                     if word not in keyword_categories:
                         keyword_categories[word] = Counter()
                     keyword_categories[word][category] += 1
-
+ 
         topic_to_category = {}
         for topic in all_graph_topics:
             matched_cat = None
-            
-            # Step 1: Event category propagation
             if topic in keyword_categories:
                 most_common = keyword_categories[topic].most_common(1)
                 if most_common:
                     matched_cat = most_common[0][0]
                     
-            # Step 2: Static dictionary fallback matching
             if not matched_cat or matched_cat in ["❓ 기타/미분류", "기타/미분류"]:
                 t_lower = topic.lower()
                 for cat, words in CATEGORY_DICT.items():
@@ -424,8 +417,7 @@ async def get_graph_data(current_user: str = Depends(get_current_user)):
                         
             if matched_cat and matched_cat not in ["❓ 기타/미분류", "기타/미분류"]:
                 topic_to_category[topic] = matched_cat
-
-        # Step 3: Dynamic batch LLM classification fallback for remaining "other" topics
+ 
         unclassified_topics = [t for t in all_graph_topics if t not in topic_to_category]
         if unclassified_topics:
             try:
@@ -436,11 +428,10 @@ async def get_graph_data(current_user: str = Depends(get_current_user)):
                         topic_to_category[topic] = cat
             except Exception as e:
                 print(f"Error calling classify_topics_batch: {e}")
-
+ 
         topic_nodes = {}
         for ch in top_channels:
             topic_counter = Counter(channel_topics[ch])
-            # Only top 3 topics per channel
             top_topics_for_ch = [t for t, c in topic_counter.most_common(3)]
             
             for topic in top_topics_for_ch:
@@ -449,16 +440,11 @@ async def get_graph_data(current_user: str = Depends(get_current_user)):
                     group = "other"
                     if matched_cat:
                         raw_group = matched_cat.split()[-1]
-                        if any(kw in raw_group for kw in ["테크", "금융", "리뷰", "쇼핑", "소비"]):
-                            group = "business_tech"
-                        elif any(kw in raw_group for kw in ["예능", "엔터", "아이돌", "연예", "애니", "웹툰", "음악", "요리", "먹방", "패션", "뷰티"]):
-                            group = "entertainment"
-                        elif any(kw in raw_group for kw in ["과학", "지식", "공부", "입시", "뉴스", "정치", "사회", "부동산", "자동차"]):
-                            group = "info_society"
-                        elif any(kw in raw_group for kw in ["운동", "건강", "스포츠", "일상", "취미", "자기계발"]):
-                            group = "life_health"
-                        elif "게임" in raw_group:
-                            group = "game"
+                        if any(kw in raw_group for kw in ["테크", "금융", "리뷰", "쇼핑", "소비"]): group = "business_tech"
+                        elif any(kw in raw_group for kw in ["예능", "엔터", "아이돌", "연예", "애니", "웹툰", "음악", "요리", "먹방", "패션", "뷰티"]): group = "entertainment"
+                        elif any(kw in raw_group for kw in ["과학", "지식", "공부", "입시", "뉴스", "정치", "사회", "부동산", "자동차"]): group = "info_society"
+                        elif any(kw in raw_group for kw in ["운동", "건강", "스포츠", "일상", "취미", "자기계발"]): group = "life_health"
+                        elif "게임" in raw_group: group = "game"
                     
                     nodes.append({
                         "id": node_id,
@@ -475,11 +461,7 @@ async def get_graph_data(current_user: str = Depends(get_current_user)):
                     "value": topic_counter[topic]
                 })
         if not nodes:
-            return {
-                "state": "empty",
-                "nodes": [],
-                "edges": []
-            }
+            return {"state": "empty", "nodes": [], "edges": []}
         return {"state": "success", "nodes": nodes, "edges": edges}
     finally:
         db.close()
@@ -511,16 +493,15 @@ async def get_guide_data(current_user: str = Depends(get_current_user)):
                     "completed": False
                 })
         else:
-            # Generate dynamic fallback missions based on the 3 lowest scores (weakest dimensions)
             score = db.query(ScoreRun).filter(ScoreRun.dataset_id == dataset_id).first()
             if score:
                 dimensions = [
-                    ("tds", score.tds or score.diversity or 50.0, "주제 다양성", "다양한 분야의 시청이 부족합니다. 평소와 완전히 다른 새로운 주제를 시청해 보세요.", "새로운 카테고리 영상 10분 이상 시청 완료", "다큐멘터리"),
-                    ("sbs", score.sbs or score.diversity or 50.0, "출처 균형", "특정 소수 크리에이터 채널 시청 비중이 너무 높습니다. 다른 유익한 전문 채널을 탐색해 보세요.", "구독 외 추천 채널 영상 1개 시청 완료", "전문가 심층 분석"),
-                    ("ebs", score.ebs or score.stability or 50.0, "감정 균형", "최근 감정적으로 자극되거나 편향된 영상을 많이 시청했습니다. 차분하고 안정된 교양 영상을 감상해 보세요.", "마음이 편안해지는 클래식/힐링 영상 시청 완료", "스트레스 완화 음악"),
-                    ("vos", score.vos or score.openness or 50.0, "관점 개방", "확증 편향의 우려가 있습니다. 내가 가진 입장과 다른 관점의 해설이나 원본 사료를 검색하여 비교해 보세요.", "다른 입장을 담은 영상 시청 완료", "지식의 역사적 사실과 원인"),
-                    ("sms", score.sms or score.stability or 50.0, "유해 안전", "도파민을 과도하게 자극하는 숏폼 위주의 시청이 우려됩니다. 10분 이상의 긴 호흡 영상을 시청해 보세요.", "10분 이상 롱폼 영상 시청 완료", "뇌 과학 도파민 비밀"),
-                    ("uas", score.uas or score.proactivity or 50.0, "사용자 주도", "알고리즘 추천 피드에 끌려다니는 수동 시청 비율이 높습니다. 직접 알고 싶은 키워드를 검색해서 시청해 보세요.", "직접 검색창 키워드 검색 시청 완료", "나를 발전시키는 취미")
+                    ("tds", score.tds, "주제 다양성", "다양한 분야의 시청이 부족합니다. 평소와 완전히 다른 새로운 주제를 시청해 보세요.", "새로운 카테고리 영상 10분 이상 시청 완료", "다큐멘터리"),
+                    ("sbs", score.sbs, "출처 균형", "특정 소수 크리에이터 채널 시청 비중이 너무 높습니다. 다른 유익한 전문 채널을 탐색해 보세요.", "구독 외 추천 채널 영상 1개 시청 완료", "전문가 심층 분석"),
+                    ("ebs", score.ebs, "감정 균형", "최근 감정적으로 자극되거나 편향된 영상을 많이 시청했습니다. 차분하고 안정된 교양 영상을 감상해 보세요.", "마음이 편안해지는 클래식/힐링 영상 시청 완료", "스트레스 완화 음악"),
+                    ("vos", score.vos, "관점 개방", "확증 편향의 우려가 있습니다. 내가 가진 입장과 다른 관점의 해설이나 원본 사료를 검색하여 비교해 보세요.", "다른 입장을 담은 영상 시청 완료", "지식의 역사적 사실과 원인"),
+                    ("sms", score.sms, "유해 안전", "도파민을 과도하게 자극하는 숏폼 위주의 시청이 우려됩니다. 10분 이상의 긴 호흡 영상을 시청해 보세요.", "10분 이상 롱폼 영상 시청 완료", "뇌 과학 도파민 비밀"),
+                    ("uas", score.uas, "사용자 주도", "알고리즘 추천 피드에 끌려다니는 수동 시청 비율이 높습니다. 직접 알고 싶은 키워드를 검색해서 시청해 보세요.", "직접 검색창 키워드 검색 시청 완료", "나를 발전시키는 취미")
                 ]
                 sorted_dims = sorted(dimensions, key=lambda x: x[1])
                 weak_dims = sorted_dims[:3]
@@ -562,16 +543,13 @@ async def get_guide_data(current_user: str = Depends(get_current_user)):
         else:
             streak_days = 0
         
-        # Check today's completion from MissionLog
         today_logs = db.query(MissionLog).filter(
             MissionLog.plan_id == current_user, 
             MissionLog.completed_yn == True
         ).all()
         
-        # Filter logs for today
         completed_indices = [int(log.mission_id) for log in today_logs if get_kst_date(log.completed_at) == today]
         
-        # Calculate streak history (last 7 days)
         seven_days_ago = today - timedelta(days=7)
         past_logs = db.query(MissionLog).filter(
             MissionLog.plan_id == current_user,
@@ -619,14 +597,12 @@ async def sync_missions(req: SyncMissionsRequest, current_user: str = Depends(ge
                     dt = datetime.strptime(dt.split('.')[0], "%Y-%m-%d %H:%M:%S")
             return dt.replace(tzinfo=timezone.utc).astimezone(KST).date()
         
-        # Clear today's logs for this user to simply rewrite them
         old_logs = db.query(MissionLog).filter(MissionLog.plan_id == current_user).all()
         for log in old_logs:
             if get_kst_date(log.completed_at) == today:
                 db.delete(log)
         db.commit()
         
-        # Insert new logs
         for idx in req.completed_indices:
             new_log = MissionLog(
                 plan_id=current_user,
@@ -637,9 +613,7 @@ async def sync_missions(req: SyncMissionsRequest, current_user: str = Depends(ge
             db.add(new_log)
         db.commit()
         
-        # Update Streak if 3 missions are complete
         user_streak = db.query(UserStreak).filter(UserStreak.user_id == current_user).first()
-        
         if not user_streak:
             user_streak = UserStreak(user_id=current_user, current_streak=0)
             db.add(user_streak)
@@ -652,7 +626,6 @@ async def sync_missions(req: SyncMissionsRequest, current_user: str = Depends(ge
                     user_streak.last_completed_date = None
                     db.commit()
             
-        # Very simple streak logic: if 3 missions completed today, and last_completed_date != today, increment
         if len(req.completed_indices) >= 3:
             last_date = get_kst_date(user_streak.last_completed_date)
             if not last_date or last_date != today:
@@ -660,7 +633,6 @@ async def sync_missions(req: SyncMissionsRequest, current_user: str = Depends(ge
                 user_streak.last_completed_date = datetime.utcnow()
                 db.commit()
         else:
-            # If they unchecked, we might need to decrement if it was already counted today
             last_date = get_kst_date(user_streak.last_completed_date)
             if last_date == today:
                 user_streak.current_streak = max(0, user_streak.current_streak - 1)
@@ -720,7 +692,6 @@ async def get_dashboard_data(dataset_id: str, current_user: str = Depends(get_cu
                 "percentage": round((count / total_valid) * 100, 1)
             })
             
-        # Compute dynamic top_interests
         session_data = db.query(UserSession.total_events, NLPResult.analysis_data).join(
             NLPResult, UserSession.id == NLPResult.session_id
         ).filter(UserSession.dataset_id == dataset_id).all()
@@ -787,7 +758,6 @@ async def get_dashboard_data(dataset_id: str, current_user: str = Depends(get_cu
             "message": uncat_msg
         }
             
-        # Count parsed successful events for confidence metric
         num_events = len(raw_events)
         confidence = round(min(1.0, num_events / 200.0), 2)
         data_quality = "high" if num_events >= 200 else ("medium" if num_events >= 50 else "low")
@@ -795,12 +765,6 @@ async def get_dashboard_data(dataset_id: str, current_user: str = Depends(get_cu
         return {
             "dataset_id": dataset_id,
             "scores": {
-                "diversity": score.diversity,
-                "stability": score.stability,
-                "proactivity": score.proactivity,
-                "openness": score.openness,
-                "manipulation_index": score.manipulation_index,
-                "persona_type": score.persona_type,
                 "tds": score.tds,
                 "sbs": score.sbs,
                 "ebs": score.ebs,
@@ -809,7 +773,8 @@ async def get_dashboard_data(dataset_id: str, current_user: str = Depends(get_cu
                 "uas": score.uas,
                 "brs": score.brs,
                 "confidence": confidence,
-                "data_quality": data_quality
+                "data_quality": data_quality,
+                "persona_type": score.persona_type
             },
             "report": report.report_data if report else None,
             "uncategorized": uncategorized_data,
@@ -819,6 +784,55 @@ async def get_dashboard_data(dataset_id: str, current_user: str = Depends(get_cu
                 "top_interests": top_interests,
                 "uncategorized": uncategorized_data
             }
+        }
+    finally:
+        db.close()
+
+from pydantic import BaseModel
+class SurveyDataRequest(BaseModel):
+    tds: int
+    sbs: int
+    ebs: int
+    vos: int
+    sms: int
+    uas: int
+
+@router.post("/survey")
+async def save_survey_data(req: SurveyDataRequest, current_user: str = Depends(get_current_user)):
+    db = SessionLocal()
+    try:
+        from models.schemas import SurveyResponse
+        survey = db.query(SurveyResponse).filter(SurveyResponse.user_id == current_user).first()
+        if not survey:
+            survey = SurveyResponse(user_id=current_user)
+            db.add(survey)
+        
+        survey.tds = req.tds
+        survey.sbs = req.sbs
+        survey.ebs = req.ebs
+        survey.vos = req.vos
+        survey.sms = req.sms
+        survey.uas = req.uas
+        db.commit()
+        return {"status": "ok"}
+    finally:
+        db.close()
+
+@router.get("/survey")
+async def get_survey_data(current_user: str = Depends(get_current_user)):
+    db = SessionLocal()
+    try:
+        from models.schemas import SurveyResponse
+        survey = db.query(SurveyResponse).filter(SurveyResponse.user_id == current_user).first()
+        if not survey:
+            return {"tds": 50, "sbs": 50, "ebs": 50, "vos": 50, "sms": 50, "uas": 50}
+        return {
+            "tds": survey.tds,
+            "sbs": survey.sbs,
+            "ebs": survey.ebs,
+            "vos": survey.vos,
+            "sms": survey.sms,
+            "uas": survey.uas
         }
     finally:
         db.close()

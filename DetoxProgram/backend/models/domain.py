@@ -5,9 +5,11 @@ class UploadResponse(BaseModel):
     status: str
 
 class DetoxScore(BaseModel):
-    diversity: float
-    stability: float
-    proactivity: float
-    openness: float
-    manipulation_index: float
+    tds: float
+    sbs: float
+    ebs: float
+    vos: float
+    sms: float
+    uas: float
+    brs: float
     persona_type: str
