@@ -156,14 +156,40 @@ def extract_raw_data_html(file_content: bytes):
     구글 테이크아웃의 시청 기록(HTML)에서 데이터를 추출합니다.
     """
     events = []
-    # HTML 파싱
-    soup = BeautifulSoup(file_content, "lxml")
+    
+    # 1. 생 텍스트 수준에서 1만 건만 자르기 (OOM 방지)
+    try:
+        html_str = file_content.decode('utf-8', errors='ignore')
+    except Exception:
+        html_str = file_content.decode('cp949', errors='ignore') # fallback
+        
+    limit = 10000
+    pos = -1
+    count = 0
+    # "content-cell" 키워드를 기준으로 10001번째가 등장하는 위치를 빠르게 탐색
+    for _ in range(limit + 1):
+        pos = html_str.find("content-cell", pos + 1)
+        if pos == -1:
+            break
+        count += 1
+        
+    # 10001번째가 발견되면 그 직전의 <div 시작 부분까지만 자름
+    if count > limit and pos != -1:
+        cut_idx = html_str.rfind("<div", 0, pos)
+        if cut_idx != -1:
+            html_str = html_str[:cut_idx]
+        else:
+            html_str = html_str[:pos]
+            
+    # HTML 파싱 (이미 1만 건 수준으로 줄어든 텍스트 파싱)
+    soup = BeautifulSoup(html_str, "lxml")
+    
     # 'content-cell' 클래스가 포함된 모든 div 탐색
     cells = soup.find_all("div", class_=lambda c: c and "content-cell" in c)
     
-    # 테이크아웃 데이터는 최신순 정렬이므로 루프 전에 미리 잘라내어 파싱 부하 최적화
-    if len(cells) > 10000:
-        cells = cells[:10000]
+    # 최종 검증을 위한 슬라이싱
+    if len(cells) > limit:
+        cells = cells[:limit]
         
     for cell in cells:
         text_content = cell.get_text(separator=" ", strip=True)
@@ -271,7 +297,13 @@ def filter_fake_dopamine(events):
             
         next_event = events[i + 1]
         time_diff = (next_event["watch_time"] - current_event["watch_time"]).total_seconds()
-        current_event["duration_watched"] = int(time_diff)
+        
+        # 공백 상한선 보정 (Capping):
+        # 1시간(3600초) 이상의 공백이 발생하면 기본 시청 시간 10분(600초)으로 강제 제한
+        if time_diff >= 3600:
+            current_event["duration_watched"] = 600
+        else:
+            current_event["duration_watched"] = int(time_diff)
         
         if time_diff <= 5:
             current_event["parse_status"] = "reject"
